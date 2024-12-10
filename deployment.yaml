@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unravel-be
+  namespace: unravel-be
+  labels:
+    app: unravel-be
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: unravel-be
+  template:
+    metadata:
+      labels:
+        app: unravel-be
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+      containers:
+      - name: app
+        image: unravel-be:latest
+        ports:
+        - name: http
+          containerPort: 8080
+        imagePullPolicy: Never
+      nodeSelector:
+        kubernetes.io/os: linux

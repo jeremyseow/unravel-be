@@ -1,0 +1,15 @@
+server:
+  port: 8080
+  host: localhost
+
+database:
+  host: localhost
+  port: 5432
+  name: unravel-db
+  user: root
+  password: secret
+  sslmode: disable
+
+logging:
+  level: debug
+  format: text

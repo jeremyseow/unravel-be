@@ -1,0 +1,7 @@
+database:
+  name: unravel_staging
+  password: ${DB_PASSWORD}  # Using environment variable
+
+logging:
+  level: info
+  format: json

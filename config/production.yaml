@@ -1,0 +1,12 @@
+server:
+  host: 0.0.0.0
+
+database:
+  host: ${DB_HOST}
+  name: unravel_prod
+  password: ${DB_PASSWORD}
+  sslmode: verify-full
+
+logging:
+  level: warn
+  format: json
