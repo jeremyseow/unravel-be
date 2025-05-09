@@ -24,6 +24,9 @@ WORKDIR /app
 # copy only the binary from the previous stage.
 COPY --from=builder /build/unravel-be ./unravel-be
 
+# copy the config directory
+COPY --from=builder /build/config ./config
+
 EXPOSE 8080
 
 # run the binary

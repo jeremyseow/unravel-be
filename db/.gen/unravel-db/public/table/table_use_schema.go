@@ -13,4 +13,5 @@ func UseSchema(schema string) {
 	EntityParameters = EntityParameters.FromSchema(schema)
 	EntitySchemas = EntitySchemas.FromSchema(schema)
 	EntitySchemasParametersMappings = EntitySchemasParametersMappings.FromSchema(schema)
+	SchemaMigrations = SchemaMigrations.FromSchema(schema)
 }

@@ -19,9 +19,9 @@ type entitySchemasParametersMappingsTable struct {
 	// Columns
 	ID            postgres.ColumnInteger
 	TenantID      postgres.ColumnString
-	SchemaName    postgres.ColumnString
+	SchemaKey     postgres.ColumnString
 	SchemaVersion postgres.ColumnString
-	ParameterName postgres.ColumnString
+	ParameterKey  postgres.ColumnString
 	IsRequired    postgres.ColumnBool
 	CreatedAt     postgres.ColumnTimestamp
 	UpdatedAt     postgres.ColumnTimestamp
@@ -38,7 +38,7 @@ type EntitySchemasParametersMappingsTable struct {
 
 // AS creates new EntitySchemasParametersMappingsTable with assigned alias
 func (a EntitySchemasParametersMappingsTable) AS(alias string) *EntitySchemasParametersMappingsTable {
-	return newEntitySchemasParametersMappingsTable(a.SchemaName.Name(), a.TableName(), alias)
+	return newEntitySchemasParametersMappingsTable(a.SchemaName(), a.TableName(), alias)
 }
 
 // Schema creates new EntitySchemasParametersMappingsTable with assigned schema name
@@ -48,12 +48,12 @@ func (a EntitySchemasParametersMappingsTable) FromSchema(schemaName string) *Ent
 
 // WithPrefix creates new EntitySchemasParametersMappingsTable with assigned table prefix
 func (a EntitySchemasParametersMappingsTable) WithPrefix(prefix string) *EntitySchemasParametersMappingsTable {
-	return newEntitySchemasParametersMappingsTable(a.SchemaName.Name(), prefix+a.TableName(), a.TableName())
+	return newEntitySchemasParametersMappingsTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
 // WithSuffix creates new EntitySchemasParametersMappingsTable with assigned table suffix
 func (a EntitySchemasParametersMappingsTable) WithSuffix(suffix string) *EntitySchemasParametersMappingsTable {
-	return newEntitySchemasParametersMappingsTable(a.SchemaName.Name(), a.TableName()+suffix, a.TableName())
+	return newEntitySchemasParametersMappingsTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
 func newEntitySchemasParametersMappingsTable(schemaName, tableName, alias string) *EntitySchemasParametersMappingsTable {
@@ -67,14 +67,14 @@ func newEntitySchemasParametersMappingsTableImpl(schemaName, tableName, alias st
 	var (
 		IDColumn            = postgres.IntegerColumn("id")
 		TenantIDColumn      = postgres.StringColumn("tenant_id")
-		SchemaNameColumn    = postgres.StringColumn("schema_name")
+		SchemaKeyColumn     = postgres.StringColumn("schema_key")
 		SchemaVersionColumn = postgres.StringColumn("schema_version")
-		ParameterNameColumn = postgres.StringColumn("parameter_name")
+		ParameterKeyColumn  = postgres.StringColumn("parameter_key")
 		IsRequiredColumn    = postgres.BoolColumn("is_required")
 		CreatedAtColumn     = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaNameColumn, SchemaVersionColumn, ParameterNameColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaNameColumn, SchemaVersionColumn, ParameterNameColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
+		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, ParameterKeyColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, ParameterKeyColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entitySchemasParametersMappingsTable{
@@ -83,9 +83,9 @@ func newEntitySchemasParametersMappingsTableImpl(schemaName, tableName, alias st
 		//Columns
 		ID:            IDColumn,
 		TenantID:      TenantIDColumn,
-		SchemaName:    SchemaNameColumn,
+		SchemaKey:     SchemaKeyColumn,
 		SchemaVersion: SchemaVersionColumn,
-		ParameterName: ParameterNameColumn,
+		ParameterKey:  ParameterKeyColumn,
 		IsRequired:    IsRequiredColumn,
 		CreatedAt:     CreatedAtColumn,
 		UpdatedAt:     UpdatedAtColumn,

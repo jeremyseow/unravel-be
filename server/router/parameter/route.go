@@ -8,6 +8,6 @@ import (
 func RegisterRoutes(router *gin.Engine, parameterHandler *parameter.ParameterHandler) {
 	schemaGroup := router.Group("/parameters")
 	{
-		schemaGroup.GET("/", parameterHandler.GetParameters)
+		schemaGroup.GET("", parameterHandler.GetParameters)
 	}
 }

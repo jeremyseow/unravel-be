@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    image: unravel-be:latest
+    container_name: unravel-be
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    # restart: unless-stopped
+
+  database:
+    image: postgres:16-alpine
+    container_name: unravel-db
+    hostname: unravel-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=unravel-db
+      - PGSSLMODE=disable
+    volumes:
+      - postgres_data:/var/lib/postgres
+    # restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -19,10 +19,9 @@ type entitySchemasTable struct {
 	// Columns
 	ID            postgres.ColumnInteger
 	TenantID      postgres.ColumnString
-	SchemaName    postgres.ColumnString
+	SchemaKey     postgres.ColumnString
 	SchemaVersion postgres.ColumnString
 	Description   postgres.ColumnString
-	JSONSchema    postgres.ColumnString
 	CreatedAt     postgres.ColumnTimestamp
 	UpdatedAt     postgres.ColumnTimestamp
 
@@ -38,7 +37,7 @@ type EntitySchemasTable struct {
 
 // AS creates new EntitySchemasTable with assigned alias
 func (a EntitySchemasTable) AS(alias string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.SchemaName.Name(), a.TableName(), alias)
+	return newEntitySchemasTable(a.SchemaName(), a.TableName(), alias)
 }
 
 // Schema creates new EntitySchemasTable with assigned schema name
@@ -48,12 +47,12 @@ func (a EntitySchemasTable) FromSchema(schemaName string) *EntitySchemasTable {
 
 // WithPrefix creates new EntitySchemasTable with assigned table prefix
 func (a EntitySchemasTable) WithPrefix(prefix string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.SchemaName.Name(), prefix+a.TableName(), a.TableName())
+	return newEntitySchemasTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
 // WithSuffix creates new EntitySchemasTable with assigned table suffix
 func (a EntitySchemasTable) WithSuffix(suffix string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.SchemaName.Name(), a.TableName()+suffix, a.TableName())
+	return newEntitySchemasTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
 func newEntitySchemasTable(schemaName, tableName, alias string) *EntitySchemasTable {
@@ -67,14 +66,13 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 	var (
 		IDColumn            = postgres.IntegerColumn("id")
 		TenantIDColumn      = postgres.StringColumn("tenant_id")
-		SchemaNameColumn    = postgres.StringColumn("schema_name")
+		SchemaKeyColumn     = postgres.StringColumn("schema_key")
 		SchemaVersionColumn = postgres.StringColumn("schema_version")
 		DescriptionColumn   = postgres.StringColumn("description")
-		JSONSchemaColumn    = postgres.StringColumn("json_schema")
 		CreatedAtColumn     = postgres.TimestampColumn("created_at")
 		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaNameColumn, SchemaVersionColumn, DescriptionColumn, JSONSchemaColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaNameColumn, SchemaVersionColumn, DescriptionColumn, JSONSchemaColumn, CreatedAtColumn, UpdatedAtColumn}
+		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entitySchemasTable{
@@ -83,10 +81,9 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 		//Columns
 		ID:            IDColumn,
 		TenantID:      TenantIDColumn,
-		SchemaName:    SchemaNameColumn,
+		SchemaKey:     SchemaKeyColumn,
 		SchemaVersion: SchemaVersionColumn,
 		Description:   DescriptionColumn,
-		JSONSchema:    JSONSchemaColumn,
 		CreatedAt:     CreatedAtColumn,
 		UpdatedAt:     UpdatedAtColumn,
 

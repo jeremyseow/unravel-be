@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,7 +30,13 @@ func NewServer(cfg *config.Config, allStorages *storage.AllStorages) *Server {
 }
 
 func (s *Server) StartServer() {
-	go http.ListenAndServe(fmt.Sprintf("%s:%d", s.Cfg.Server.Host, s.Cfg.Server.Port), s.HTTPRouter)
+	go func() {
+		if err := s.HTTPRouter.Run(fmt.Sprintf(":%d", s.Cfg.Server.Port)); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
+	}()
+	fmt.Println("Server started")
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan

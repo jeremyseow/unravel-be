@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-type EntitySchemas struct {
+type EntitySchemasParametersMappings struct {
 	ID            int64 `sql:"primary_key"`
 	TenantID      uuid.UUID
-	SchemaName    string
+	SchemaKey     string
 	SchemaVersion string
-	Description   *string
-	JSONSchema    *string
+	ParameterKey  string
+	IsRequired    *bool
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
 }

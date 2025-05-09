@@ -3,7 +3,7 @@ server:
   host: localhost
 
 database:
-  host: localhost
+  host: unravel-db
   port: 5432
   name: unravel-db
   user: root

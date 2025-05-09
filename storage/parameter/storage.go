@@ -7,8 +7,8 @@ import (
 	"database/sql"
 
 	. "github.com/go-jet/jet/v2/postgres"
-	"github.com/jeremyseow/unravel-be/.gen/unravel-db/public/model"
-	. "github.com/jeremyseow/unravel-be/.gen/unravel-db/public/table"
+	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
+	. "github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/table"
 )
 
 type Storage interface {
@@ -27,7 +27,7 @@ func NewStorage(db *sql.DB) Storage {
 
 func (s *StorageImpl) GetParameters(_ context.Context) ([]model.EntityParameters, error) {
 	stmt := SELECT(
-		EntityParameters.ParameterName,
+		EntityParameters.ParameterKey,
 		EntityParameters.DataType,
 	).FROM(
 		EntityParameters,

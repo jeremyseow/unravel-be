@@ -13,11 +13,11 @@ import (
 )
 
 type EntityParameters struct {
-	ID            int64 `sql:"primary_key"`
-	TenantID      uuid.UUID
-	ParameterName string
-	DataType      string
-	Description   *string
-	CreatedAt     *time.Time
-	UpdatedAt     *time.Time
+	ID           int64 `sql:"primary_key"`
+	TenantID     uuid.UUID
+	ParameterKey string
+	DataType     string
+	Description  *string
+	CreatedAt    *time.Time
+	UpdatedAt    *time.Time
 }
