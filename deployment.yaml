@@ -1,3 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: unravel-be
+  labels:
+    name: unravel-be
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,7 +13,7 @@ metadata:
   labels:
     app: unravel-be
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: unravel-be
@@ -23,14 +30,63 @@ spec:
               - key: kubernetes.io/arch
                 operator: In
                 values:
-                - amd64
                 - arm64
       containers:
       - name: app
-        image: unravel-be:latest
+        image: ealen/echo-server
         ports:
         - name: http
-          containerPort: 8080
-        imagePullPolicy: Never
+          containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "250m"
+            memory: "128Mi"
+        # imagePullPolicy: Never
+        readinessProbe:
+          httpGet:
+            path: /params  # or your health check endpoint
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
       nodeSelector:
         kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: unravel-be-svc
+  namespace: unravel-be
+spec:
+  selector:
+    app: unravel-be  # This selector matches the Pod's labels
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+
+# https://github.com/kubernetes-sigs/aws-load-balancer-controller/issues/4014
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unravel-be-lb
+  namespace: unravel-be
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/load-balancer-name: unravel-be-lb
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb
+  defaultBackend:
+    service:
+      name: unravel-be-svc
+      port:
+        number: 80
