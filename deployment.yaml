@@ -4,7 +4,9 @@ metadata:
   name: unravel-be
   labels:
     name: unravel-be
+
 ---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,10 +16,10 @@ metadata:
     app: unravel-be
 spec:
   replicas: 1
-  selector:
+  selector: # the deployment will manage pods with the following labels.
     matchLabels:
       app: unravel-be
-  template:
+  template: # pod template
     metadata:
       labels:
         app: unravel-be
@@ -53,7 +55,9 @@ spec:
           periodSeconds: 5
       nodeSelector:
         kubernetes.io/os: linux
+
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -77,7 +81,7 @@ kind: Ingress
 metadata:
   name: unravel-be-lb
   namespace: unravel-be
-  annotations:
+  annotations: # https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/load-balancer-name: unravel-be-lb

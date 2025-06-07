@@ -14,17 +14,19 @@ type AllStorages struct {
 }
 
 func NewAllStorages(cfg *config.Config) (*AllStorages, error) {
+	allStorages := &AllStorages{
+		config: cfg,
+	}
+
 	db, err := sql.Open("postgres", cfg.GetDSN())
 	if err != nil {
-		return nil, err
+		return allStorages, err
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, err
+		return allStorages, err
 	}
 
-	return &AllStorages{
-		ParameterStorage: parameter.NewStorage(db),
-		config:           cfg,
-	}, nil
+	allStorages.ParameterStorage = parameter.NewStorage(db)
+	return allStorages, nil
 }

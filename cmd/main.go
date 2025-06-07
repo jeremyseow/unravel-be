@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/jeremyseow/unravel-be/config"
 	"github.com/jeremyseow/unravel-be/server"
 	"github.com/jeremyseow/unravel-be/storage"
@@ -14,7 +16,8 @@ func main() {
 
 	allStorages, err := storage.NewAllStorages(cfg)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		// panic(err)
 	}
 
 	s := server.NewServer(cfg, allStorages)
