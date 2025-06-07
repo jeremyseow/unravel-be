@@ -35,10 +35,10 @@ spec:
                 - arm64
       containers:
       - name: app
-        image: ealen/echo-server
+        image: 833481287972.dkr.ecr.ap-southeast-1.amazonaws.com/jeremy/testing:latest
         ports:
         - name: http
-          containerPort: 80
+          containerPort: 8080
         resources:
           requests:
             cpu: "100m"
@@ -49,8 +49,8 @@ spec:
         # imagePullPolicy: Never
         readinessProbe:
           httpGet:
-            path: /params  # or your health check endpoint
-            port: 80
+            path: /health  # health check endpoint
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
       nodeSelector:
@@ -69,8 +69,8 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 8080
+      targetPort: 8080
   type: ClusterIP
 
 ---
@@ -86,11 +86,11 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/load-balancer-name: unravel-be-lb
     alb.ingress.kubernetes.io/backend-protocol: HTTP
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":8080}]'
 spec:
   ingressClassName: alb
   defaultBackend:
     service:
       name: unravel-be-svc
       port:
-        number: 80
+        number: 8080

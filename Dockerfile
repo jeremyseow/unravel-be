@@ -14,7 +14,7 @@ WORKDIR /build
 COPY ./ ./
 
 # build the binary, here we are cross building for linux.
-RUN CGO_ENABLED=0 GOOS=linux go build -o ./unravel-be ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o ./unravel-be ./cmd/main.go
 
 # for the 2nd stage, we are using the thin alpine image.
 FROM alpine:latest
