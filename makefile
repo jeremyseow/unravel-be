@@ -15,12 +15,15 @@ jet_gen:
 
 create_migration:
 	migrate create -ext sql -dir ./db/migration $1
-	
+	# split up and down migrations into separate directories so that postgres image can init based on the up directory
+	mv ./db/migration/*.up.sql ./db/migration/up/
+	mv ./db/migration/*.down.sql ./db/migration/down/
+
 migration_up:
-	migrate -database postgres://root:secret@localhost:5432/unravel-db?sslmode=disable -path ./db/migration up
+	migrate -database postgres://root:secret@localhost:5432/unravel-db?sslmode=disable -path ./db/migration/up up
 
 migration_down:
-	migrate -database postgres://root:secret@localhost:5432/unravel-db?sslmode=disable -path ./db/migration down
+	migrate -database postgres://root:secret@localhost:5432/unravel-db?sslmode=disable -path ./db/migration/down down
 
 create_image:
 	docker build -t unravel-be .

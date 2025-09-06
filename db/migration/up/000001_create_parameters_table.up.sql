@@ -1,11 +1,13 @@
-create table entity_parameters (
+CREATE TABLE entity_parameters (
 	id BIGSERIAL,
 	tenant_id uuid NOT NULL,
 	parameter_key VARCHAR(32) NOT NULL,
+	parameter_name VARCHAR(32) NOT NULL,
 	data_type VARCHAR(16) NOT NULL,
 	description VARCHAR(255),
-	created_at TIMESTAMP DEFAULT current_timestamp,
-	updated_at TIMESTAMP DEFAULT current_timestamp,
+	sample_values VARCHAR(255),
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	
 	PRIMARY KEY (id)
 );

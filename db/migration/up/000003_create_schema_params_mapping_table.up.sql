@@ -1,12 +1,12 @@
-create table entity_schemas_parameters_mappings (
+CREATE TABLE entity_schemas_parameters_mappings (
 	id BIGSERIAL,
 	tenant_id uuid NOT NULL,
 	schema_key VARCHAR(32) NOT NULL,
 	schema_version jsonb NOT NULL,
 	parameter_key VARCHAR(32) NOT NULL,
 	is_required BOOLEAN DEFAULT TRUE,
-	created_at TIMESTAMP DEFAULT current_timestamp,
-	updated_at TIMESTAMP DEFAULT current_timestamp,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	
 	PRIMARY KEY (id)
 );

@@ -21,6 +21,7 @@ services:
       - PGSSLMODE=disable
     volumes:
       - postgres_data:/var/lib/postgres
+      - ./db/migration/up:/docker-entrypoint-initdb.d # runs all sql scripts in the directory
     # restart: unless-stopped
 
 volumes:
