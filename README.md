@@ -63,3 +63,110 @@ unravel-be/
 └── deployment.yaml
 └── README.md
 ```
+
+# API Reference
+
+## Health Check
+
+### GET /health
+Returns the health status of the service.
+
+**Response:**
+```json
+{
+  "message": "ok"
+}
+```
+
+## Parameters
+
+### GET /parameters
+Returns all parameters stored in the database.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "parameter_key": "string",
+      "data_type": "string"
+    }
+  ]
+}
+```
+
+## Schemas
+
+### POST /schemas
+Create a new schema. A unique version is automatically generated based on the parameters provided.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "parameters": {
+    "key": "value"
+  }
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "version": "v1-<hash>",
+  "parameters": {},
+  "created_at": "timestamp",
+  "updated_at": "timestamp"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid request body or parameters
+- `409 Conflict`: Schema version already exists
+
+### GET /schemas/:name
+Returns all versions of a schema by name.
+
+**Path Parameters:**
+- `name`: The name of the schema
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "string",
+    "version": "v1-<hash>",
+    "parameters": {},
+    "created_at": "timestamp",
+    "updated_at": "timestamp"
+  }
+]
+```
+
+**Error Responses:**
+- `404 Not Found`: Schema not found
+
+### GET /schemas/:name/versions/:version
+Returns a specific version of a schema.
+
+**Path Parameters:**
+- `name`: The name of the schema
+- `version`: The version identifier (e.g., `v1-abc12345`)
+
+**Response (200 OK):**
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "version": "v1-<hash>",
+  "parameters": {},
+  "created_at": "timestamp",
+  "updated_at": "timestamp"
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Schema or version not found
