@@ -1,5 +1,15 @@
 # https://stackoverflow.com/questions/2145590/what-is-the-purpose-of-phony-in-a-makefile
-.PHONY: lint
+.PHONY: lint test test-integration
+
+# Run unit and handler tests — no database required.
+test:
+	go test -short ./...
+
+# Run all tests including storage integration tests.
+# Requires the docker-compose database to be running: make run_db && make migration_up
+test-integration:
+	TEST_DB_DSN="postgresql://root:secret@localhost:5432/unravel-db?sslmode=disable" \
+		go test -v -count=1 ./...
 
 lint:
 	golangci-lint run -c .golangci.yml
