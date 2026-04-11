@@ -20,5 +20,11 @@ func RegisterRoutes(router *gin.Engine, schemaHandler *schema.SchemaHandler) {
 
 		// Delete a specific version (draft lifecycle only)
 		schemaGroup.DELETE("/:name/versions/:version", schemaHandler.DeleteSchemaVersion)
+
+		// Promote the current draft to active and assign a semver
+		schemaGroup.POST("/:name/draft/publish", schemaHandler.PublishDraft)
+
+		// Deprecate a specific active version
+		schemaGroup.POST("/:name/versions/:version/deprecate", schemaHandler.DeprecateSchemaVersion)
 	}
 }

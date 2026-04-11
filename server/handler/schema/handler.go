@@ -18,7 +18,8 @@ func NewSchemaHandler(storage schemaStorage.Storage) *SchemaHandler {
 }
 
 // CreateSchema handles POST /schemas.
-// Creates a new schema at version 1.0.0. Proper semver bumping is Phase 3.
+// All new schemas start as drafts at version 0.0.0. The real semver is
+// assigned at publish time based on what changed from the previous version.
 func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 	var req CreateSchemaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -26,14 +27,13 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 		return
 	}
 
-	initialVersion := "1.0.0"
-	isLatest := true
+	isLatest := false
 	lifecycle := "draft"
 
 	schemaRow := model.EntitySchemas{
 		SchemaKey:     req.SchemaKey,
 		SchemaName:    req.SchemaName,
-		SchemaVersion: initialVersion,
+		SchemaVersion: schemaStorage.DraftVersion,
 		Description:   req.Description,
 		IsLatest:      &isLatest,
 		Lifecycle:     &lifecycle,
@@ -107,6 +107,51 @@ func (h *SchemaHandler) DeleteSchemaVersion(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// PublishDraft handles POST /schemas/:name/draft/publish.
+// Promotes the current draft to active, auto-detects the semver bump, and
+// assigns the new version. Returns the published schema with bump metadata.
+func (h *SchemaHandler) PublishDraft(c *gin.Context) {
+	key := c.Param("name")
+
+	result, err := h.SchemaStorage.PublishDraft(c, key)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "no draft found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, toPublishResponse(result))
+}
+
+// DeprecateSchemaVersion handles POST /schemas/:name/versions/:version/deprecate.
+func (h *SchemaHandler) DeprecateSchemaVersion(c *gin.Context) {
+	key := c.Param("name")
+	version := c.Param("version")
+
+	record, err := h.SchemaStorage.DeprecateSchemaVersion(c, key, version)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "schema_not_active:") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, toSchemaResponse(record))
+}
+
+func toPublishResponse(r *schemaStorage.PublishResult) PublishResponse {
+	return PublishResponse{
+		SchemaResponse:  toSchemaResponse(&r.SchemaRecord),
+		VersionBump:     r.VersionBump,
+		PreviousVersion: r.PreviousVersion,
+	}
 }
 
 func toSchemaResponse(r *schemaStorage.SchemaRecord) SchemaResponse {
