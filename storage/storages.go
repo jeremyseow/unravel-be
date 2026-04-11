@@ -5,11 +5,13 @@ import (
 
 	"github.com/jeremyseow/unravel-be/config"
 	"github.com/jeremyseow/unravel-be/storage/parameter"
+	"github.com/jeremyseow/unravel-be/storage/schema"
 	_ "github.com/lib/pq"
 )
 
 type AllStorages struct {
 	ParameterStorage parameter.Storage
+	SchemaStorage    schema.Storage
 	config           *config.Config
 }
 
@@ -28,5 +30,6 @@ func NewAllStorages(cfg *config.Config) (*AllStorages, error) {
 	}
 
 	allStorages.ParameterStorage = parameter.NewStorage(db)
+	allStorages.SchemaStorage = schema.NewStorage(db)
 	return allStorages, nil
 }

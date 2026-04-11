@@ -1,119 +1,115 @@
 package schema
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"net/http"
-	"sort"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
+	schemaStorage "github.com/jeremyseow/unravel-be/storage/schema"
 )
 
-// SchemaHandler handles schema-related operations
 type SchemaHandler struct {
-	// TODO: Add database interface here
-	schemas map[string][]Schema // temporary in-memory storage
+	SchemaStorage schemaStorage.Storage
 }
 
-// NewSchemaHandler creates a new schema handler
-func NewSchemaHandler() *SchemaHandler {
-	return &SchemaHandler{
-		schemas: make(map[string][]Schema),
-	}
+func NewSchemaHandler(storage schemaStorage.Storage) *SchemaHandler {
+	return &SchemaHandler{SchemaStorage: storage}
 }
 
-// CreateSchema handles the creation of a new schema
+// CreateSchema handles POST /schemas.
+// Creates a new schema at version 1.0.0. Proper semver bumping is Phase 3.
 func (h *SchemaHandler) CreateSchema(c *gin.Context) {
-	var req SchemaRequest
+	var req CreateSchemaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := req.ValidateParameters(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	initialVersion := "1.0.0"
+	isLatest := true
+	lifecycle := "draft"
+
+	schemaRow := model.EntitySchemas{
+		SchemaKey:     req.SchemaKey,
+		SchemaName:    req.SchemaName,
+		SchemaVersion: initialVersion,
+		Description:   req.Description,
+		IsLatest:      &isLatest,
+		Lifecycle:     &lifecycle,
+	}
+
+	mappings := make([]model.EntitySchemasParametersMappings, 0, len(req.Parameters))
+	for _, p := range req.Parameters {
+		isRequired := p.IsRequired
+		mappings = append(mappings, model.EntitySchemasParametersMappings{
+			ParameterKey: p.ParameterKey,
+			IsRequired:   &isRequired,
+		})
+	}
+
+	record, err := h.SchemaStorage.CreateSchema(c, schemaRow, mappings)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Generate version based on parameters
-	version := h.generateVersion(req.Parameters)
-
-	// Check if this version already exists
-	schemas := h.schemas[req.Name]
-	for _, s := range schemas {
-		if s.Version == version {
-			c.JSON(http.StatusConflict, gin.H{"error": "schema version already exists"})
-			return
-		}
-	}
-
-	schema := Schema{
-		ID:         uuid.New(),
-		Name:       req.Name,
-		Version:    version,
-		Parameters: req.Parameters,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
-
-	h.schemas[req.Name] = append(h.schemas[req.Name], schema)
-
-	c.JSON(http.StatusCreated, schema)
+	c.JSON(http.StatusCreated, toSchemaResponse(record))
 }
 
-// GetSchemas returns all versions of a schema
+// GetSchemas handles GET /schemas/:name — returns all versions of a schema.
 func (h *SchemaHandler) GetSchemas(c *gin.Context) {
-	name := c.Param("name")
-	schemas, exists := h.schemas[name]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "schema not found"})
+	key := c.Param("name")
+
+	records, err := h.SchemaStorage.GetSchemasByKey(c, key)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, schemas)
+	responses := make([]SchemaResponse, 0, len(records))
+	for i := range records {
+		responses = append(responses, toSchemaResponse(&records[i]))
+	}
+	c.JSON(http.StatusOK, responses)
 }
 
-// GetSchemaVersion returns a specific version of a schema
+// GetSchemaVersion handles GET /schemas/:name/versions/:version.
 func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
-	name := c.Param("name")
+	key := c.Param("name")
 	version := c.Param("version")
 
-	schemas, exists := h.schemas[name]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "schema not found"})
+	record, err := h.SchemaStorage.GetSchemaVersion(c, key, version)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
-	for _, schema := range schemas {
-		if schema.Version == version {
-			c.JSON(http.StatusOK, schema)
-			return
-		}
-	}
-
-	c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
+	c.JSON(http.StatusOK, toSchemaResponse(record))
 }
 
-// generateVersion creates a semantic version based on the parameters
-func (h *SchemaHandler) generateVersion(params map[string]any) string {
-	// Sort keys for consistent hashing
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		keys = append(keys, k)
+func toSchemaResponse(r *schemaStorage.SchemaRecord) SchemaResponse {
+	params := make([]SchemaParamDetail, 0, len(r.Parameters))
+	for _, m := range r.Parameters {
+		isRequired := false
+		if m.IsRequired != nil {
+			isRequired = *m.IsRequired
+		}
+		params = append(params, SchemaParamDetail{
+			ParameterKey: m.ParameterKey,
+			IsRequired:   isRequired,
+		})
 	}
-	sort.Strings(keys)
 
-	// Create a JSON string of sorted parameters
-	paramBytes, _ := json.Marshal(params)
-
-	// Generate hash of parameters
-	hash := sha256.Sum256(paramBytes)
-	shortHash := hex.EncodeToString(hash[:])[:8]
-
-	// For now, using a simple version scheme: v1-[hash]
-	// TODO: Implement proper semantic versioning based on parameter changes
-	return "v1-" + shortHash
+	return SchemaResponse{
+		ID:          r.ID,
+		SchemaKey:   r.SchemaKey,
+		SchemaName:  r.SchemaName,
+		Version:     r.SchemaVersion,
+		Description: r.Description,
+		IsLatest:    r.IsLatest,
+		Lifecycle:   r.Lifecycle,
+		Parameters:  params,
+		CreatedAt:   r.CreatedAt,
+		UpdatedAt:   r.UpdatedAt,
+	}
 }

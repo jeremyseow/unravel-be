@@ -14,9 +14,7 @@ type AllHandlers struct {
 
 func NewAllHandlers(cfg *config.Config, allStorages *storage.AllStorages) *AllHandlers {
 	return &AllHandlers{
-		SchemaHandler: schema.NewSchemaHandler(),
-		ParameterHandler: parameter.NewParameterHandler(
-			allStorages.ParameterStorage,
-		),
+		SchemaHandler:    schema.NewSchemaHandler(allStorages.SchemaStorage),
+		ParameterHandler: parameter.NewParameterHandler(allStorages.ParameterStorage),
 	}
 }

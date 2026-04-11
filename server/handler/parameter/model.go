@@ -1,11 +1,16 @@
 package parameter
 
-type Parameter struct {
-	Name     string `json:"name"`
-	DataType string `json:"data_type"`
+type CreateParameterRequest struct {
+	ParameterKey  string  `json:"parameter_key" binding:"required,max=32"`
+	ParameterName string  `json:"parameter_name" binding:"required,max=32"`
+	DataType      string  `json:"data_type" binding:"required"`
+	Description   *string `json:"description"`
+	SampleValues  *string `json:"sample_values"`
 }
 
-type ParameterRequest struct {
-	Name     string `json:"name" binding:"required"`
-	DataType string `json:"data_type" binding:"required"`
+type UpdateParameterRequest struct {
+	ParameterName string  `json:"parameter_name" binding:"required,max=32"`
+	DataType      string  `json:"data_type" binding:"required"`
+	Description   *string `json:"description"`
+	SampleValues  *string `json:"sample_values"`
 }

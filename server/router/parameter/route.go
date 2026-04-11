@@ -6,8 +6,11 @@ import (
 )
 
 func RegisterRoutes(router *gin.Engine, parameterHandler *parameter.ParameterHandler) {
-	schemaGroup := router.Group("/parameters")
+	group := router.Group("/parameters")
 	{
-		schemaGroup.GET("", parameterHandler.GetParameters)
+		group.GET("", parameterHandler.GetParameters)
+		group.POST("", parameterHandler.CreateParameter)
+		group.PUT("/:key", parameterHandler.UpdateParameter)
+		group.DELETE("/:key", parameterHandler.DeleteParameter)
 	}
 }

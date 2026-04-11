@@ -1,33 +1,38 @@
 package schema
 
-import (
-	"encoding/json"
-	"fmt"
-	"time"
+import "time"
 
-	"github.com/google/uuid"
-)
-
-// Schema represents a versioned schema definition
-type Schema struct {
-	ID        uuid.UUID          `json:"id"`
-	Name      string            `json:"name"`
-	Version   string            `json:"version"`
-	Parameters map[string]any    `json:"parameters"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+// CreateSchemaRequest is the body for POST /schemas.
+// Parameters lists parameter_key references from the parameter catalog.
+type CreateSchemaRequest struct {
+	SchemaKey   string               `json:"schema_key" binding:"required,max=32"`
+	SchemaName  string               `json:"schema_name" binding:"required,max=32"`
+	Description *string              `json:"description"`
+	Parameters  []SchemaParameterRef `json:"parameters" binding:"required,min=1"`
 }
 
-// SchemaRequest represents the incoming request to create/update a schema
-type SchemaRequest struct {
-	Name       string         `json:"name" binding:"required"`
-	Parameters map[string]any `json:"parameters" binding:"required"`
+// SchemaParameterRef references one entry in the parameter catalog.
+type SchemaParameterRef struct {
+	ParameterKey string `json:"parameter_key" binding:"required"`
+	IsRequired   bool   `json:"is_required"`
 }
 
-// ValidateParameters checks if the parameters are valid JSON
-func (s *SchemaRequest) ValidateParameters() error {
-	if _, err := json.Marshal(s.Parameters); err != nil {
-		return fmt.Errorf("invalid parameters format: %v", err)
-	}
-	return nil
+// SchemaResponse is the API representation of a schema version.
+type SchemaResponse struct {
+	ID          int64               `json:"id"`
+	SchemaKey   string              `json:"schema_key"`
+	SchemaName  string              `json:"schema_name"`
+	Version     string              `json:"version"`
+	Description *string             `json:"description"`
+	IsLatest    *bool               `json:"is_latest"`
+	Lifecycle   *string             `json:"lifecycle"`
+	Parameters  []SchemaParamDetail `json:"parameters"`
+	CreatedAt   *time.Time          `json:"created_at"`
+	UpdatedAt   *time.Time          `json:"updated_at"`
+}
+
+// SchemaParamDetail is one parameter entry in a SchemaResponse.
+type SchemaParamDetail struct {
+	ParameterKey string `json:"parameter_key"`
+	IsRequired   bool   `json:"is_required"`
 }
