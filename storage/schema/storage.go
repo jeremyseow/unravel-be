@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/google/uuid"
@@ -110,8 +113,7 @@ func (s *StorageImpl) GetSchemasByKey(_ context.Context, key string) ([]SchemaRe
 		WHERE(
 			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))),
-		).
-		ORDER_BY(RawString("string_to_array(entity_schemas.schema_version, '.')::int[] DESC"))
+		)
 
 	var schemas []model.EntitySchemas
 	if err := stmt.Query(s.db, &schemas); err != nil {
@@ -129,7 +131,69 @@ func (s *StorageImpl) GetSchemasByKey(_ context.Context, key string) ([]SchemaRe
 		}
 		records = append(records, SchemaRecord{EntitySchemas: sc, Parameters: mappings})
 	}
+
+	sortByVersion(records)
 	return records, nil
+}
+
+// sortByVersion sorts SchemaRecords newest-first using semver comparison.
+// Handles major.minor.patch today; extend compareSemver for pre-release tags
+// when the CHECK constraint is relaxed in a future migration.
+func sortByVersion(records []SchemaRecord) {
+	sort.Slice(records, func(i, j int) bool {
+		return compareSemver(records[i].SchemaVersion, records[j].SchemaVersion) > 0
+	})
+}
+
+// compareSemver returns 1 if a > b, -1 if a < b, 0 if equal.
+// Supports optional pre-release suffix (e.g. "1.0.0-rc.1"):
+//   - release (no suffix) ranks above any pre-release
+//   - pre-release identifiers are compared lexicographically
+func compareSemver(a, b string) int {
+	parseVersion := func(v string) (major, minor, patch int, pre string) {
+		parts := strings.SplitN(v, "-", 2)
+		nums := strings.Split(parts[0], ".")
+		toInt := func(s string) int { n, _ := strconv.Atoi(s); return n }
+		if len(nums) > 0 {
+			major = toInt(nums[0])
+		}
+		if len(nums) > 1 {
+			minor = toInt(nums[1])
+		}
+		if len(nums) > 2 {
+			patch = toInt(nums[2])
+		}
+		if len(parts) == 2 {
+			pre = parts[1]
+		}
+		return
+	}
+
+	aMaj, aMin, aPat, aPre := parseVersion(a)
+	bMaj, bMin, bPat, bPre := parseVersion(b)
+
+	for _, pair := range [3][2]int{{aMaj, bMaj}, {aMin, bMin}, {aPat, bPat}} {
+		if pair[0] != pair[1] {
+			if pair[0] > pair[1] {
+				return 1
+			}
+			return -1
+		}
+	}
+
+	// Release (empty pre) ranks above any pre-release
+	switch {
+	case aPre == "" && bPre != "":
+		return 1
+	case aPre != "" && bPre == "":
+		return -1
+	case aPre != bPre:
+		if aPre > bPre {
+			return 1
+		}
+		return -1
+	}
+	return 0
 }
 
 func (s *StorageImpl) GetSchemaVersion(_ context.Context, key string, version string) (*SchemaRecord, error) {
