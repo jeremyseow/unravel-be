@@ -111,7 +111,7 @@ func (s *StorageImpl) GetSchemasByKey(_ context.Context, key string) ([]SchemaRe
 			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))),
 		).
-		ORDER_BY(EntitySchemas.CreatedAt.DESC())
+		ORDER_BY(RawString("string_to_array(entity_schemas.schema_version, '.')::int[] DESC"))
 
 	var schemas []model.EntitySchemas
 	if err := stmt.Query(s.db, &schemas); err != nil {
