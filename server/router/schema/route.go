@@ -17,5 +17,8 @@ func RegisterRoutes(router *gin.Engine, schemaHandler *schema.SchemaHandler) {
 
 		// Get a specific version of a schema
 		schemaGroup.GET("/:name/versions/:version", schemaHandler.GetSchemaVersion)
+
+		// Delete a specific version (draft lifecycle only)
+		schemaGroup.DELETE("/:name/versions/:version", schemaHandler.DeleteSchemaVersion)
 	}
 }

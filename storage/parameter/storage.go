@@ -94,6 +94,24 @@ func (s *StorageImpl) UpdateParameter(_ context.Context, key string, param model
 }
 
 func (s *StorageImpl) DeleteParameter(_ context.Context, key string) error {
+	// Block deletion if the parameter is referenced by any schema — removing it
+	// would leave dangling references in both draft and active schemas.
+	refStmt := SELECT(EntitySchemasParametersMappings.ParameterKey).
+		FROM(EntitySchemasParametersMappings).
+		WHERE(
+			EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+				AND(EntitySchemasParametersMappings.ParameterKey.EQ(String(key))),
+		).
+		LIMIT(1)
+
+	var refs []model.EntitySchemasParametersMappings
+	if err := refStmt.Query(s.db, &refs); err != nil {
+		return err
+	}
+	if len(refs) > 0 {
+		return fmt.Errorf("parameter_referenced: parameter %q is used by one or more schemas and cannot be deleted", key)
+	}
+
 	stmt := EntityParameters.DELETE().WHERE(
 		EntityParameters.TenantID.EQ(String(defaultTenantID.String())).
 			AND(EntityParameters.ParameterKey.EQ(String(key))),

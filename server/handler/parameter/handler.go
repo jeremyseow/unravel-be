@@ -2,6 +2,7 @@ package parameter
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
@@ -88,6 +89,10 @@ func (h *ParameterHandler) DeleteParameter(c *gin.Context) {
 	key := c.Param("key")
 
 	if err := h.ParameterStorage.DeleteParameter(c, key); err != nil {
+		if strings.HasPrefix(err.Error(), "parameter_referenced:") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}

@@ -92,6 +92,23 @@ func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
 	c.JSON(http.StatusOK, toSchemaResponse(record))
 }
 
+// DeleteSchemaVersion handles DELETE /schemas/:name/versions/:version.
+// Only draft schemas may be deleted; active schemas are immutable.
+func (h *SchemaHandler) DeleteSchemaVersion(c *gin.Context) {
+	key := c.Param("name")
+	version := c.Param("version")
+
+	if err := h.SchemaStorage.DeleteSchemaVersion(c, key, version); err != nil {
+		if strings.HasPrefix(err.Error(), "schema_not_draft:") {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
+
 func toSchemaResponse(r *schemaStorage.SchemaRecord) SchemaResponse {
 	params := make([]SchemaParamDetail, 0, len(r.Parameters))
 	for _, m := range r.Parameters {

@@ -69,6 +69,7 @@ type Storage interface {
 	CreateSchema(ctx context.Context, schema model.EntitySchemas, mappings []model.EntitySchemasParametersMappings) (*SchemaRecord, error)
 	GetSchemasByKey(ctx context.Context, key string) ([]SchemaRecord, error)
 	GetSchemaVersion(ctx context.Context, key string, version string) (*SchemaRecord, error)
+	DeleteSchemaVersion(ctx context.Context, key string, version string) error
 }
 
 type StorageImpl struct {
@@ -184,6 +185,47 @@ func (s *StorageImpl) GetSchemasByKey(_ context.Context, key string) ([]SchemaRe
 
 	sortByVersion(records)
 	return records, nil
+}
+
+func (s *StorageImpl) DeleteSchemaVersion(ctx context.Context, key, version string) error {
+	record, err := s.GetSchemaVersion(ctx, key, version)
+	if err != nil {
+		return err
+	}
+
+	if record.Lifecycle != nil && *record.Lifecycle != "draft" {
+		return fmt.Errorf("schema_not_draft: schema %s@%s has lifecycle %q; only draft schemas can be deleted", key, version, *record.Lifecycle)
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	delMappings := EntitySchemasParametersMappings.DELETE().WHERE(
+		EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+			AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(key))).
+			AND(EntitySchemasParametersMappings.SchemaVersion.EQ(String(version))),
+	)
+	if _, err = delMappings.Exec(tx); err != nil {
+		return err
+	}
+
+	delSchema := EntitySchemas.DELETE().WHERE(
+		EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			AND(EntitySchemas.SchemaKey.EQ(String(key))).
+			AND(EntitySchemas.SchemaVersion.EQ(String(version))),
+	)
+	if _, err = delSchema.Exec(tx); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // sortByVersion sorts SchemaRecords newest-first using semver comparison.
