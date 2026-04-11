@@ -14,6 +14,48 @@ import (
 	. "github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/table"
 )
 
+// validateParameterKeys checks that every key in the supplied list exists in
+// entity_parameters for the default tenant. It runs inside the provided
+// transaction so the check is consistent with the subsequent inserts.
+func validateParameterKeys(tx *sql.Tx, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	exprs := make([]Expression, len(keys))
+	for i, k := range keys {
+		exprs[i] = String(k)
+	}
+
+	stmt := SELECT(EntityParameters.ParameterKey).
+		FROM(EntityParameters).
+		WHERE(
+			EntityParameters.TenantID.EQ(String(defaultTenantID.String())).
+				AND(EntityParameters.ParameterKey.IN(exprs...)),
+		)
+
+	var found []model.EntityParameters
+	if err := stmt.Query(tx, &found); err != nil {
+		return err
+	}
+
+	foundSet := make(map[string]bool, len(found))
+	for _, p := range found {
+		foundSet[p.ParameterKey] = true
+	}
+
+	var missing []string
+	for _, k := range keys {
+		if !foundSet[k] {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("parameter keys not found in catalog: %v", missing)
+	}
+	return nil
+}
+
 // TODO: Replace with tenant ID from auth context (Phase 6)
 var defaultTenantID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
@@ -49,6 +91,14 @@ func (s *StorageImpl) CreateSchema(_ context.Context, schema model.EntitySchemas
 	}()
 
 	schema.TenantID = defaultTenantID
+
+	keys := make([]string, len(mappings))
+	for i, m := range mappings {
+		keys[i] = m.ParameterKey
+	}
+	if err = validateParameterKeys(tx, keys); err != nil {
+		return nil, err
+	}
 
 	insertSchema := EntitySchemas.INSERT(
 		EntitySchemas.TenantID,

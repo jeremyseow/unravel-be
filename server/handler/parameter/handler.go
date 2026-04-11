@@ -34,6 +34,11 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 		return
 	}
 
+	if err := validateDataType(req.DataType); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	param := model.EntityParameters{
 		ParameterKey:  req.ParameterKey,
 		ParameterName: req.ParameterName,
@@ -55,6 +60,11 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	var req UpdateParameterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := validateDataType(req.DataType); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

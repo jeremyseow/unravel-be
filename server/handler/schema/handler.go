@@ -2,6 +2,7 @@ package schema
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
@@ -49,6 +50,10 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 
 	record, err := h.SchemaStorage.CreateSchema(c, schemaRow, mappings)
 	if err != nil {
+		if strings.Contains(err.Error(), "parameter keys not found in catalog") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
