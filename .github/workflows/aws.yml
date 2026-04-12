@@ -24,9 +24,11 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.24
+        go-version: '1.25'
 
     - name: Test
+      # Ubuntu runners have Docker available; testcontainers spins up the
+      # PostgreSQL container automatically. No external DB setup needed.
       run: go test -v ./...
       
   build:
