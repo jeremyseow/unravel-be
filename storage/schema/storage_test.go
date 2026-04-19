@@ -3,15 +3,18 @@ package schema
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,7 +55,7 @@ func TestMain(m *testing.M) {
 			db, openErr := sql.Open("postgres", connStr)
 			if openErr != nil {
 				fmt.Fprintf(os.Stderr, "testcontainers: failed to open db: %v\n", openErr)
-			} else if migrErr := applyMigrations(db); migrErr != nil {
+			} else if migrErr := applyMigrations(connStr); migrErr != nil {
 				fmt.Fprintf(os.Stderr, "testcontainers: failed to apply migrations: %v\n", migrErr)
 			} else {
 				testDB = db
@@ -78,9 +81,30 @@ func requireDB(t *testing.T) *sql.DB {
 	return testDB
 }
 
-// findModuleRoot walks up from the current working directory until it finds
-// go.mod, indicating the module root.
-func findModuleRoot() (string, error) {
+// applyMigrations runs all up migrations against the given database using
+// golang-migrate, exactly as `make migration_up` does in development.
+// connStr must be a postgres:// URL (the format returned by testcontainers).
+func applyMigrations(connStr string) error {
+	root, err := moduleRoot()
+	if err != nil {
+		return err
+	}
+	migDir := "file://" + filepath.Join(root, "db", "migration")
+
+	m, err := migrate.New(migDir, connStr)
+	if err != nil {
+		return fmt.Errorf("migrate.New: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+	return nil
+}
+
+// moduleRoot walks up from the test's working directory to find the module root.
+func moduleRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -95,40 +119,6 @@ func findModuleRoot() (string, error) {
 		}
 		dir = parent
 	}
-}
-
-// applyMigrations reads every *.sql file in db/migration/up (sorted by name)
-// and executes each one against the provided database. This mirrors the
-// behaviour of `make migration_up` without requiring the migrate CLI.
-func applyMigrations(db *sql.DB) error {
-	root, err := findModuleRoot()
-	if err != nil {
-		return err
-	}
-	migDir := filepath.Join(root, "db", "migration", "up")
-
-	entries, err := os.ReadDir(migDir)
-	if err != nil {
-		return fmt.Errorf("read migration dir %s: %w", migDir, err)
-	}
-
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Name() < entries[j].Name()
-	})
-
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
-			continue
-		}
-		content, err := os.ReadFile(filepath.Join(migDir, entry.Name()))
-		if err != nil {
-			return fmt.Errorf("read %s: %w", entry.Name(), err)
-		}
-		if _, err := db.Exec(string(content)); err != nil {
-			return fmt.Errorf("exec %s: %w", entry.Name(), err)
-		}
-	}
-	return nil
 }
 
 // seedParameter inserts a parameter row used as a foreign-key reference in
