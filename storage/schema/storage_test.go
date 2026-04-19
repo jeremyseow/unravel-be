@@ -146,7 +146,7 @@ func seedParameter(t *testing.T, db *sql.DB, key string) {
 
 	t.Cleanup(func() {
 		EntityParameters.DELETE().WHERE(
-			EntityParameters.TenantID.EQ(String(defaultTenantID.String())).
+			EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntityParameters.ParameterKey.EQ(String(key))),
 		).Exec(db) //nolint:errcheck
 	})
@@ -158,11 +158,11 @@ func cleanupSchema(t *testing.T, db *sql.DB, key string) {
 	t.Helper()
 	t.Cleanup(func() {
 		EntitySchemasParametersMappings.DELETE().WHERE(
-			EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemasParametersMappings.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(key))),
 		).Exec(db) //nolint:errcheck
 		EntitySchemas.DELETE().WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))),
 		).Exec(db) //nolint:errcheck
 	})

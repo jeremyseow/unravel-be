@@ -19,6 +19,13 @@ const DraftVersion = "0.0.0"
 // TODO: Replace with tenant ID from auth context (Phase 6)
 var defaultTenantID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
+// uuidStr casts a uuid.UUID to a StringExpression with an explicit ::uuid cast.
+// Required because pq sends string parameters as the text OID, and PostgreSQL
+// has no implicit uuid = text operator.
+func uuidStr(id uuid.UUID) StringExpression {
+	return StringExp(CAST(String(id.String())).AS("uuid"))
+}
+
 // SchemaRecord holds a schema row together with its parameter mappings.
 type SchemaRecord struct {
 	model.EntitySchemas
@@ -67,7 +74,7 @@ func validateParameterKeys(tx *sql.Tx, keys []string) error {
 	stmt := SELECT(EntityParameters.ParameterKey).
 		FROM(EntityParameters).
 		WHERE(
-			EntityParameters.TenantID.EQ(String(defaultTenantID.String())).
+			EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntityParameters.ParameterKey.IN(exprs...)),
 		)
 
@@ -175,7 +182,7 @@ func (s *StorageImpl) GetSchemasByKey(_ context.Context, key string) ([]SchemaRe
 	stmt := SELECT(EntitySchemas.AllColumns).
 		FROM(EntitySchemas).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))),
 		)
 
@@ -204,7 +211,7 @@ func (s *StorageImpl) GetSchemaVersion(_ context.Context, key string, version st
 	stmt := SELECT(EntitySchemas.AllColumns).
 		FROM(EntitySchemas).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.SchemaVersion.EQ(String(version))),
 		).
@@ -246,7 +253,7 @@ func (s *StorageImpl) DeleteSchemaVersion(ctx context.Context, key, version stri
 	}()
 
 	delMappings := EntitySchemasParametersMappings.DELETE().WHERE(
-		EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+		EntitySchemasParametersMappings.TenantID.EQ(uuidStr(defaultTenantID)).
 			AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(key))).
 			AND(EntitySchemasParametersMappings.SchemaVersion.EQ(String(version))),
 	)
@@ -255,7 +262,7 @@ func (s *StorageImpl) DeleteSchemaVersion(ctx context.Context, key, version stri
 	}
 
 	delSchema := EntitySchemas.DELETE().WHERE(
-		EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+		EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 			AND(EntitySchemas.SchemaKey.EQ(String(key))).
 			AND(EntitySchemas.SchemaVersion.EQ(String(version))),
 	)
@@ -309,7 +316,7 @@ func (s *StorageImpl) PublishDraft(_ context.Context, key string) (*PublishResul
 		unsetLatest := EntitySchemas.UPDATE(EntitySchemas.IsLatest).
 			SET(false).
 			WHERE(
-				EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+				EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 					AND(EntitySchemas.SchemaKey.EQ(String(key))).
 					AND(EntitySchemas.SchemaVersion.EQ(String(latestActive.SchemaVersion))),
 			)
@@ -329,7 +336,7 @@ func (s *StorageImpl) PublishDraft(_ context.Context, key string) (*PublishResul
 		"active",
 		true,
 	).WHERE(
-		EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+		EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 			AND(EntitySchemas.SchemaKey.EQ(String(key))).
 			AND(EntitySchemas.SchemaVersion.EQ(String(DraftVersion))),
 	).RETURNING(EntitySchemas.AllColumns)
@@ -345,7 +352,7 @@ func (s *StorageImpl) PublishDraft(_ context.Context, key string) (*PublishResul
 	updateMappings := EntitySchemasParametersMappings.UPDATE(EntitySchemasParametersMappings.SchemaVersion).
 		SET(newVersion).
 		WHERE(
-			EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemasParametersMappings.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(key))).
 				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(String(DraftVersion))),
 		)
@@ -401,7 +408,7 @@ func (s *StorageImpl) DeprecateSchemaVersion(ctx context.Context, key, version s
 	deprecateStmt := EntitySchemas.UPDATE(EntitySchemas.Lifecycle, EntitySchemas.IsLatest).
 		SET("deprecated", false).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.SchemaVersion.EQ(String(version))),
 		).RETURNING(EntitySchemas.AllColumns)
@@ -438,7 +445,7 @@ func (s *StorageImpl) getDraft(key string) (*SchemaRecord, error) {
 	stmt := SELECT(EntitySchemas.AllColumns).
 		FROM(EntitySchemas).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.SchemaVersion.EQ(String(DraftVersion))),
 		).LIMIT(1)
@@ -464,7 +471,7 @@ func (s *StorageImpl) getLatestActive(key string) (*SchemaRecord, error) {
 	stmt := SELECT(EntitySchemas.AllColumns).
 		FROM(EntitySchemas).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.Lifecycle.EQ(String("active"))).
 				AND(EntitySchemas.IsLatest.EQ(Bool(true))),
@@ -492,7 +499,7 @@ func (s *StorageImpl) promoteNextLatest(tx *sql.Tx, key, excludeVersion string) 
 	stmt := SELECT(EntitySchemas.AllColumns).
 		FROM(EntitySchemas).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.Lifecycle.EQ(String("active"))).
 				AND(EntitySchemas.SchemaVersion.NOT_EQ(String(excludeVersion))),
@@ -517,7 +524,7 @@ func (s *StorageImpl) promoteNextLatest(tx *sql.Tx, key, excludeVersion string) 
 	updateStmt := EntitySchemas.UPDATE(EntitySchemas.IsLatest).
 		SET(true).
 		WHERE(
-			EntitySchemas.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemas.SchemaKey.EQ(String(key))).
 				AND(EntitySchemas.SchemaVersion.EQ(String(nextLatest))),
 		)
@@ -529,7 +536,7 @@ func (s *StorageImpl) getMappings(schemaKey, schemaVersion string) ([]model.Enti
 	stmt := SELECT(EntitySchemasParametersMappings.AllColumns).
 		FROM(EntitySchemasParametersMappings).
 		WHERE(
-			EntitySchemasParametersMappings.TenantID.EQ(String(defaultTenantID.String())).
+			EntitySchemasParametersMappings.TenantID.EQ(uuidStr(defaultTenantID)).
 				AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(schemaKey))).
 				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(String(schemaVersion))),
 		)
