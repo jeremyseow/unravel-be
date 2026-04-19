@@ -40,20 +40,25 @@ func TestMain(m *testing.M) {
 		tcpostgres.WithUsername("test"),
 		tcpostgres.WithPassword("test"),
 	)
-	if err == nil {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "testcontainers: failed to start postgres container: %v\n", err)
+	} else {
 		terminate = func() { pgc.Terminate(ctx) } //nolint:errcheck
 
 		connStr, connErr := pgc.ConnectionString(ctx, "sslmode=disable")
-		if connErr == nil {
+		if connErr != nil {
+			fmt.Fprintf(os.Stderr, "testcontainers: failed to get connection string: %v\n", connErr)
+		} else {
 			db, openErr := sql.Open("postgres", connStr)
-			if openErr == nil {
-				if migrErr := applyMigrations(db); migrErr == nil {
-					testDB = db
-				}
+			if openErr != nil {
+				fmt.Fprintf(os.Stderr, "testcontainers: failed to open db: %v\n", openErr)
+			} else if migrErr := applyMigrations(db); migrErr != nil {
+				fmt.Fprintf(os.Stderr, "testcontainers: failed to apply migrations: %v\n", migrErr)
+			} else {
+				testDB = db
 			}
 		}
 	}
-	// If anything above failed, testDB stays nil and integration tests skip.
 
 	code := m.Run()
 
