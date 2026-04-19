@@ -14,7 +14,7 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -89,11 +89,15 @@ func applyMigrations(connStr string) error {
 	if err != nil {
 		return err
 	}
-	migDir := "file://" + filepath.Join(root, "db", "migration")
 
-	m, err := migrate.New(migDir, connStr)
+	d, err := iofs.New(os.DirFS(filepath.Join(root, "db", "migration")), ".")
 	if err != nil {
-		return fmt.Errorf("migrate.New: %w", err)
+		return fmt.Errorf("iofs.New: %w", err)
+	}
+
+	m, err := migrate.NewWithSourceInstance("iofs", d, connStr)
+	if err != nil {
+		return fmt.Errorf("migrate.NewWithSourceInstance: %w", err)
 	}
 	defer m.Close()
 
