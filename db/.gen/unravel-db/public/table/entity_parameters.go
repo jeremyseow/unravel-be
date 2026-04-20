@@ -24,11 +24,12 @@ type entityParametersTable struct {
 	DataType      postgres.ColumnString
 	Description   postgres.ColumnString
 	SampleValues  postgres.ColumnString
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	CreatedAt     postgres.ColumnTimestampz
+	UpdatedAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type EntityParametersTable struct {
@@ -73,10 +74,11 @@ func newEntityParametersTableImpl(schemaName, tableName, alias string) entityPar
 		DataTypeColumn      = postgres.StringColumn("data_type")
 		DescriptionColumn   = postgres.StringColumn("description")
 		SampleValuesColumn  = postgres.StringColumn("sample_values")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
 		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, ParameterKeyColumn, ParameterNameColumn, DataTypeColumn, DescriptionColumn, SampleValuesColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns      = postgres.ColumnList{TenantIDColumn, ParameterKeyColumn, ParameterNameColumn, DataTypeColumn, DescriptionColumn, SampleValuesColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entityParametersTable{
@@ -95,5 +97,6 @@ func newEntityParametersTableImpl(schemaName, tableName, alias string) entityPar
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

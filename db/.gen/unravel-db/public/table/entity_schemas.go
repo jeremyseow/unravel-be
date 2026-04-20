@@ -20,16 +20,17 @@ type entitySchemasTable struct {
 	ID            postgres.ColumnInteger
 	TenantID      postgres.ColumnString
 	SchemaKey     postgres.ColumnString
-	SchemaName    postgres.ColumnString
+	SchemaName_   postgres.ColumnString
 	SchemaVersion postgres.ColumnString
 	Description   postgres.ColumnString
 	IsLatest      postgres.ColumnBool
 	Lifecycle     postgres.ColumnString
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	CreatedAt     postgres.ColumnTimestampz
+	UpdatedAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type EntitySchemasTable struct {
@@ -40,22 +41,22 @@ type EntitySchemasTable struct {
 
 // AS creates new EntitySchemasTable with assigned alias
 func (a EntitySchemasTable) AS(alias string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.Table.SchemaName(), a.Table.TableName(), alias)
+	return newEntitySchemasTable(a.SchemaName(), a.TableName(), alias)
 }
 
 // Schema creates new EntitySchemasTable with assigned schema name
 func (a EntitySchemasTable) FromSchema(schemaName string) *EntitySchemasTable {
-	return newEntitySchemasTable(schemaName, a.Table.TableName(), a.Table.Alias())
+	return newEntitySchemasTable(schemaName, a.TableName(), a.Alias())
 }
 
 // WithPrefix creates new EntitySchemasTable with assigned table prefix
 func (a EntitySchemasTable) WithPrefix(prefix string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.Table.SchemaName(), prefix+a.Table.TableName(), a.Table.TableName())
+	return newEntitySchemasTable(a.SchemaName(), prefix+a.TableName(), a.TableName())
 }
 
 // WithSuffix creates new EntitySchemasTable with assigned table suffix
 func (a EntitySchemasTable) WithSuffix(suffix string) *EntitySchemasTable {
-	return newEntitySchemasTable(a.Table.SchemaName(), a.Table.TableName()+suffix, a.Table.TableName())
+	return newEntitySchemasTable(a.SchemaName(), a.TableName()+suffix, a.TableName())
 }
 
 func newEntitySchemasTable(schemaName, tableName, alias string) *EntitySchemasTable {
@@ -70,15 +71,16 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 		IDColumn            = postgres.IntegerColumn("id")
 		TenantIDColumn      = postgres.StringColumn("tenant_id")
 		SchemaKeyColumn     = postgres.StringColumn("schema_key")
-		SchemaNameColumn    = postgres.StringColumn("schema_name")
+		SchemaName_Column   = postgres.StringColumn("schema_name")
 		SchemaVersionColumn = postgres.StringColumn("schema_version")
 		DescriptionColumn   = postgres.StringColumn("description")
 		IsLatestColumn      = postgres.BoolColumn("is_latest")
 		LifecycleColumn     = postgres.StringColumn("lifecycle")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaNameColumn, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaNameColumn, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
+		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaName_Column, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaName_Column, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entitySchemasTable{
@@ -88,7 +90,7 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 		ID:            IDColumn,
 		TenantID:      TenantIDColumn,
 		SchemaKey:     SchemaKeyColumn,
-		SchemaName:    SchemaNameColumn,
+		SchemaName_:   SchemaName_Column,
 		SchemaVersion: SchemaVersionColumn,
 		Description:   DescriptionColumn,
 		IsLatest:      IsLatestColumn,
@@ -98,5 +100,6 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

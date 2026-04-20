@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 	var terminate func()
 
 	pgc, err := tcpostgres.Run(ctx,
-		"postgres:16-alpine",
+		"postgres:18-alpine",
 		tcpostgres.WithDatabase("testdb"),
 		tcpostgres.WithUsername("test"),
 		tcpostgres.WithPassword("test"),

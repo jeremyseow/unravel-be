@@ -23,11 +23,12 @@ type entitySchemasParametersMappingsTable struct {
 	SchemaVersion postgres.ColumnString
 	ParameterKey  postgres.ColumnString
 	IsRequired    postgres.ColumnBool
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	CreatedAt     postgres.ColumnTimestampz
+	UpdatedAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type EntitySchemasParametersMappingsTable struct {
@@ -71,10 +72,11 @@ func newEntitySchemasParametersMappingsTableImpl(schemaName, tableName, alias st
 		SchemaVersionColumn = postgres.StringColumn("schema_version")
 		ParameterKeyColumn  = postgres.StringColumn("parameter_key")
 		IsRequiredColumn    = postgres.BoolColumn("is_required")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
 		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, ParameterKeyColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, ParameterKeyColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, IsRequiredColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entitySchemasParametersMappingsTable{
@@ -92,5 +94,6 @@ func newEntitySchemasParametersMappingsTableImpl(schemaName, tableName, alias st
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

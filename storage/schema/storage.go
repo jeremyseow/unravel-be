@@ -124,7 +124,7 @@ func (s *StorageImpl) CreateSchema(_ context.Context, schema model.EntitySchemas
 	insertSchema := EntitySchemas.INSERT(
 		EntitySchemas.TenantID,
 		EntitySchemas.SchemaKey,
-		EntitySchemas.SchemaName,
+		EntitySchemas.SchemaName_,
 		EntitySchemas.SchemaVersion,
 		EntitySchemas.Description,
 		EntitySchemas.IsLatest,
