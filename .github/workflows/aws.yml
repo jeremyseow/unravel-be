@@ -17,16 +17,25 @@ jobs:
   test-and-lint:
     name: Test & Lint
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:27-dind
+        options: --privileged --mtu 1400
+        ports:
+          - 2375:2375
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
 
     - name: Setup Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v5
       with:
         go-version: 1.25
 
     - name: Test
+      env:
+        DOCKER_HOST: tcp://localhost:2375
+        DOCKER_TLS_VERIFY: ""
       run: go test -v ./...
       
   build:
