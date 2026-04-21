@@ -20,7 +20,7 @@ jobs:
     services:
       docker:
         image: docker:27-dind
-        options: --privileged --mtu 1400
+        options: --privileged
         ports:
           - 2375:2375
     steps:
