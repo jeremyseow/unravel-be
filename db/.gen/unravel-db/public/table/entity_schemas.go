@@ -20,13 +20,17 @@ type entitySchemasTable struct {
 	ID            postgres.ColumnInteger
 	TenantID      postgres.ColumnString
 	SchemaKey     postgres.ColumnString
+	SchemaName_   postgres.ColumnString
 	SchemaVersion postgres.ColumnString
 	Description   postgres.ColumnString
-	CreatedAt     postgres.ColumnTimestamp
-	UpdatedAt     postgres.ColumnTimestamp
+	IsLatest      postgres.ColumnBool
+	Lifecycle     postgres.ColumnString
+	CreatedAt     postgres.ColumnTimestampz
+	UpdatedAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type EntitySchemasTable struct {
@@ -67,12 +71,16 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 		IDColumn            = postgres.IntegerColumn("id")
 		TenantIDColumn      = postgres.StringColumn("tenant_id")
 		SchemaKeyColumn     = postgres.StringColumn("schema_key")
+		SchemaName_Column   = postgres.StringColumn("schema_name")
 		SchemaVersionColumn = postgres.StringColumn("schema_version")
 		DescriptionColumn   = postgres.StringColumn("description")
-		CreatedAtColumn     = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn     = postgres.TimestampColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaVersionColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
+		IsLatestColumn      = postgres.BoolColumn("is_latest")
+		LifecycleColumn     = postgres.StringColumn("lifecycle")
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
+		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, SchemaKeyColumn, SchemaName_Column, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{TenantIDColumn, SchemaKeyColumn, SchemaName_Column, SchemaVersionColumn, DescriptionColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, IsLatestColumn, LifecycleColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entitySchemasTable{
@@ -82,12 +90,16 @@ func newEntitySchemasTableImpl(schemaName, tableName, alias string) entitySchema
 		ID:            IDColumn,
 		TenantID:      TenantIDColumn,
 		SchemaKey:     SchemaKeyColumn,
+		SchemaName_:   SchemaName_Column,
 		SchemaVersion: SchemaVersionColumn,
 		Description:   DescriptionColumn,
+		IsLatest:      IsLatestColumn,
+		Lifecycle:     LifecycleColumn,
 		CreatedAt:     CreatedAtColumn,
 		UpdatedAt:     UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

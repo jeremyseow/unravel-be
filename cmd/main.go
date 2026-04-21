@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 
+	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http"
+	"github.com/jeremyseow/unravel-be/application/adapter/persistence/postgres"
+	"github.com/jeremyseow/unravel-be/application/usecase"
 	"github.com/jeremyseow/unravel-be/config"
-	"github.com/jeremyseow/unravel-be/server"
-	"github.com/jeremyseow/unravel-be/storage"
 )
 
 func main() {
@@ -14,12 +15,14 @@ func main() {
 		panic(err)
 	}
 
-	allStorages, err := storage.NewAllStorages(cfg)
+	allStorages, err := postgres.NewAllStorages(cfg)
 	if err != nil {
 		fmt.Println(err)
 		// panic(err)
 	}
 
-	s := server.NewServer(cfg, allStorages)
+	allServices := usecase.NewAllServices(allStorages)
+
+	s := http.NewServer(cfg, allServices)
 	s.StartServer()
 }

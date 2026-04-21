@@ -9,7 +9,7 @@ services:
     # restart: unless-stopped
 
   database:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: unravel-db
     hostname: unravel-db
     ports:
@@ -21,7 +21,6 @@ services:
       - PGSSLMODE=disable
     volumes:
       - postgres_data:/var/lib/postgres
-      - ./db/migration/up:/docker-entrypoint-initdb.d # runs all sql scripts in the directory
     # restart: unless-stopped
 
 volumes:

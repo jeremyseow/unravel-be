@@ -17,16 +17,19 @@ type entityParametersTable struct {
 	postgres.Table
 
 	// Columns
-	ID           postgres.ColumnInteger
-	TenantID     postgres.ColumnString
-	ParameterKey postgres.ColumnString
-	DataType     postgres.ColumnString
-	Description  postgres.ColumnString
-	CreatedAt    postgres.ColumnTimestamp
-	UpdatedAt    postgres.ColumnTimestamp
+	ID            postgres.ColumnInteger
+	TenantID      postgres.ColumnString
+	ParameterKey  postgres.ColumnString
+	ParameterName postgres.ColumnString
+	DataType      postgres.ColumnString
+	Description   postgres.ColumnString
+	SampleValues  postgres.ColumnString
+	CreatedAt     postgres.ColumnTimestampz
+	UpdatedAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type EntityParametersTable struct {
@@ -64,30 +67,36 @@ func newEntityParametersTable(schemaName, tableName, alias string) *EntityParame
 
 func newEntityParametersTableImpl(schemaName, tableName, alias string) entityParametersTable {
 	var (
-		IDColumn           = postgres.IntegerColumn("id")
-		TenantIDColumn     = postgres.StringColumn("tenant_id")
-		ParameterKeyColumn = postgres.StringColumn("parameter_key")
-		DataTypeColumn     = postgres.StringColumn("data_type")
-		DescriptionColumn  = postgres.StringColumn("description")
-		CreatedAtColumn    = postgres.TimestampColumn("created_at")
-		UpdatedAtColumn    = postgres.TimestampColumn("updated_at")
-		allColumns         = postgres.ColumnList{IDColumn, TenantIDColumn, ParameterKeyColumn, DataTypeColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns     = postgres.ColumnList{TenantIDColumn, ParameterKeyColumn, DataTypeColumn, DescriptionColumn, CreatedAtColumn, UpdatedAtColumn}
+		IDColumn            = postgres.IntegerColumn("id")
+		TenantIDColumn      = postgres.StringColumn("tenant_id")
+		ParameterKeyColumn  = postgres.StringColumn("parameter_key")
+		ParameterNameColumn = postgres.StringColumn("parameter_name")
+		DataTypeColumn      = postgres.StringColumn("data_type")
+		DescriptionColumn   = postgres.StringColumn("description")
+		SampleValuesColumn  = postgres.StringColumn("sample_values")
+		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
+		allColumns          = postgres.ColumnList{IDColumn, TenantIDColumn, ParameterKeyColumn, ParameterNameColumn, DataTypeColumn, DescriptionColumn, SampleValuesColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns      = postgres.ColumnList{TenantIDColumn, ParameterKeyColumn, ParameterNameColumn, DataTypeColumn, DescriptionColumn, SampleValuesColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns      = postgres.ColumnList{IDColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return entityParametersTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:           IDColumn,
-		TenantID:     TenantIDColumn,
-		ParameterKey: ParameterKeyColumn,
-		DataType:     DataTypeColumn,
-		Description:  DescriptionColumn,
-		CreatedAt:    CreatedAtColumn,
-		UpdatedAt:    UpdatedAtColumn,
+		ID:            IDColumn,
+		TenantID:      TenantIDColumn,
+		ParameterKey:  ParameterKeyColumn,
+		ParameterName: ParameterNameColumn,
+		DataType:      DataTypeColumn,
+		Description:   DescriptionColumn,
+		SampleValues:  SampleValuesColumn,
+		CreatedAt:     CreatedAtColumn,
+		UpdatedAt:     UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

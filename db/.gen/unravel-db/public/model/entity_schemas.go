@@ -16,8 +16,11 @@ type EntitySchemas struct {
 	ID            int64 `sql:"primary_key"`
 	TenantID      uuid.UUID
 	SchemaKey     string
+	SchemaName    string
 	SchemaVersion string
 	Description   *string
+	IsLatest      *bool
+	Lifecycle     *string
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
 }

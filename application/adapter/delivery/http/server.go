@@ -1,0 +1,46 @@
+package http
+
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/gin-gonic/gin"
+	"github.com/jeremyseow/unravel-be/application/usecase"
+	"github.com/jeremyseow/unravel-be/config"
+)
+
+type Server struct {
+	Cfg        *config.Config
+	HTTPRouter *gin.Engine
+}
+
+func NewServer(cfg *config.Config, services *usecase.AllServices) *Server {
+	httpRouter := gin.Default()
+	allHandlers := NewAllHandlers(cfg, services)
+	SetupRoutes(httpRouter, allHandlers)
+
+	return &Server{
+		Cfg:        cfg,
+		HTTPRouter: httpRouter,
+	}
+}
+
+func (s *Server) StartServer() {
+	go func() {
+		if err := s.HTTPRouter.Run(fmt.Sprintf(":%d", s.Cfg.Server.Port)); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
+	}()
+	fmt.Println("Server started")
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+	s.StopServer()
+}
+
+func (s *Server) StopServer() {
+	fmt.Println("Server stopped")
+}
