@@ -4,9 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine, parameterHandler *ParameterHandler) {
-	schemaGroup := router.Group("/parameters")
+func RegisterRoutes(router *gin.Engine, h *ParameterHandler) {
+	g := router.Group("/parameters")
 	{
-		schemaGroup.GET("", parameterHandler.GetParameters)
+		g.GET("", h.GetParameters)
+		g.POST("", h.CreateParameter)
+		g.PUT("/:key", h.UpdateParameter)
+		g.DELETE("/:key", h.DeleteParameter)
 	}
 }
