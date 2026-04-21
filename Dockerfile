@@ -4,7 +4,7 @@
 # any intermediate artifacts not copied are left behind, and not saved in the final image.
 
 # use a golang base image to build our app.
-FROM golang:1.24 AS builder
+FROM golang:1.25 AS builder
 
 WORKDIR /build
 
