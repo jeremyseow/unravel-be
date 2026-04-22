@@ -4,8 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterRoutes registers all schema-related routes
-func RegisterRoutes(router *gin.Engine, schemaHandler *SchemaHandler) {
+func RegisterRoutes(router *gin.RouterGroup, schemaHandler *SchemaHandler) {
 	schemaGroup := router.Group("/schemas")
 	{
 		// Create a new schema

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine, h *ParameterHandler) {
+func RegisterRoutes(router *gin.RouterGroup, h *ParameterHandler) {
 	g := router.Group("/parameters")
 	{
 		g.GET("", h.GetParameters)

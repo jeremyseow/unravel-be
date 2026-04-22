@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/jeremyseow/unravel-be/application/ctxkey"
 	"github.com/jeremyseow/unravel-be/application/domain"
 	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
 	. "github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/table"
@@ -19,13 +20,14 @@ func NewParameterStorage(db *sql.DB) *ParameterStorage {
 	return &ParameterStorage{db: db}
 }
 
-func (s *ParameterStorage) GetParameters(_ context.Context) ([]domain.Parameter, error) {
+func (s *ParameterStorage) GetParameters(ctx context.Context) ([]domain.Parameter, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := SELECT(EntityParameters.AllColumns).
 		FROM(EntityParameters).
-		WHERE(EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)))
+		WHERE(EntityParameters.TenantID.EQ(uuidStr(tenantID)))
 
 	var rows []model.EntityParameters
-	if err := stmt.Query(s.db, &rows); err != nil {
+	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil {
 		return nil, err
 	}
 
@@ -36,7 +38,8 @@ func (s *ParameterStorage) GetParameters(_ context.Context) ([]domain.Parameter,
 	return params, nil
 }
 
-func (s *ParameterStorage) CreateParameter(_ context.Context, param domain.Parameter) (domain.Parameter, error) {
+func (s *ParameterStorage) CreateParameter(ctx context.Context, param domain.Parameter) (domain.Parameter, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := EntityParameters.INSERT(
 		EntityParameters.TenantID,
 		EntityParameters.ParameterKey,
@@ -45,7 +48,7 @@ func (s *ParameterStorage) CreateParameter(_ context.Context, param domain.Param
 		EntityParameters.Description,
 		EntityParameters.SampleValues,
 	).VALUES(
-		defaultTenantID,
+		tenantID,
 		param.ParameterKey,
 		param.ParameterName,
 		param.DataType,
@@ -54,13 +57,14 @@ func (s *ParameterStorage) CreateParameter(_ context.Context, param domain.Param
 	).RETURNING(EntityParameters.AllColumns)
 
 	var row model.EntityParameters
-	if err := stmt.Query(s.db, &row); err != nil {
+	if err := stmt.QueryContext(ctx, s.db, &row); err != nil {
 		return domain.Parameter{}, err
 	}
 	return toDomainParameter(row), nil
 }
 
-func (s *ParameterStorage) UpdateParameter(_ context.Context, key string, param domain.Parameter) (domain.Parameter, error) {
+func (s *ParameterStorage) UpdateParameter(ctx context.Context, key string, param domain.Parameter) (domain.Parameter, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := EntityParameters.UPDATE(
 		EntityParameters.ParameterName,
 		EntityParameters.DataType,
@@ -72,12 +76,12 @@ func (s *ParameterStorage) UpdateParameter(_ context.Context, key string, param 
 		param.Description,
 		param.SampleValues,
 	).WHERE(
-		EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)).
+		EntityParameters.TenantID.EQ(uuidStr(tenantID)).
 			AND(EntityParameters.ParameterKey.EQ(String(key))),
 	).RETURNING(EntityParameters.AllColumns)
 
 	var row model.EntityParameters
-	if err := stmt.Query(s.db, &row); err != nil {
+	if err := stmt.QueryContext(ctx, s.db, &row); err != nil {
 		return domain.Parameter{}, err
 	}
 	if row.ParameterKey == "" {
@@ -86,12 +90,13 @@ func (s *ParameterStorage) UpdateParameter(_ context.Context, key string, param 
 	return toDomainParameter(row), nil
 }
 
-func (s *ParameterStorage) DeleteParameter(_ context.Context, key string) error {
+func (s *ParameterStorage) DeleteParameter(ctx context.Context, key string) error {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := EntityParameters.DELETE().WHERE(
-		EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)).
+		EntityParameters.TenantID.EQ(uuidStr(tenantID)).
 			AND(EntityParameters.ParameterKey.EQ(String(key))),
 	)
-	res, err := stmt.Exec(s.db)
+	res, err := stmt.ExecContext(ctx, s.db)
 	if err != nil {
 		return err
 	}
