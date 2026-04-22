@@ -39,7 +39,7 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 		Parameters:  params,
 	}
 
-	created, err := h.SchemaService.CreateSchema(c, schema)
+	created, err := h.SchemaService.CreateSchema(c.Request.Context(), schema)
 	if err != nil {
 		if strings.Contains(err.Error(), "parameter keys not found in catalog") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -54,7 +54,7 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 
 func (h *SchemaHandler) GetSchemas(c *gin.Context) {
 	key := c.Param("key")
-	schemas, err := h.SchemaService.GetSchemas(c, key)
+	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -66,7 +66,7 @@ func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
 	key := c.Param("key")
 	version := c.Param("version")
 
-	schema, err := h.SchemaService.GetSchemaVersion(c, key, version)
+	schema, err := h.SchemaService.GetSchemaVersion(c.Request.Context(), key, version)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
 		return

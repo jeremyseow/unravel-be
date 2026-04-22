@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/jeremyseow/unravel-be/application/ctxkey"
 	"github.com/jeremyseow/unravel-be/application/domain"
 	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
 	. "github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/table"
@@ -20,6 +21,7 @@ func NewSchemaStorage(db *sql.DB) *SchemaStorage {
 }
 
 func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Schema{}, err
@@ -38,7 +40,7 @@ func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) 
 		EntitySchemas.IsLatest,
 		EntitySchemas.Lifecycle,
 	).VALUES(
-		defaultTenantID,
+		tenantID,
 		schema.SchemaKey,
 		schema.SchemaName,
 		schema.SchemaVersion,
@@ -62,7 +64,7 @@ func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) 
 		)
 		for _, p := range schema.Parameters {
 			insertMappings = insertMappings.VALUES(
-				defaultTenantID,
+				tenantID,
 				schema.SchemaKey,
 				schema.SchemaVersion,
 				p.ParameterKey,
@@ -82,6 +84,7 @@ func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) 
 }
 
 func (s *SchemaStorage) GetSchemas(ctx context.Context, key string) ([]domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := SELECT(
 		EntitySchemas.AllColumns,
 		EntitySchemasParametersMappings.AllColumns,
@@ -93,7 +96,7 @@ func (s *SchemaStorage) GetSchemas(ctx context.Context, key string) ([]domain.Sc
 				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(EntitySchemas.SchemaVersion)),
 		),
 	).WHERE(
-		EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
+		EntitySchemas.TenantID.EQ(uuidStr(tenantID)).
 			AND(EntitySchemas.SchemaKey.EQ(String(key))),
 	)
 
@@ -110,6 +113,7 @@ func (s *SchemaStorage) GetSchemas(ctx context.Context, key string) ([]domain.Sc
 }
 
 func (s *SchemaStorage) GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := SELECT(
 		EntitySchemas.AllColumns,
 		EntitySchemasParametersMappings.AllColumns,
@@ -121,7 +125,7 @@ func (s *SchemaStorage) GetSchemaVersion(ctx context.Context, key, version strin
 				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(EntitySchemas.SchemaVersion)),
 		),
 	).WHERE(
-		EntitySchemas.TenantID.EQ(uuidStr(defaultTenantID)).
+		EntitySchemas.TenantID.EQ(uuidStr(tenantID)).
 			AND(EntitySchemas.SchemaKey.EQ(String(key))).
 			AND(EntitySchemas.SchemaVersion.EQ(String(version))),
 	)
@@ -137,6 +141,7 @@ func (s *SchemaStorage) GetParametersByKeys(ctx context.Context, keys []string) 
 	if len(keys) == 0 {
 		return nil, nil
 	}
+	tenantID := ctxkey.TenantID(ctx)
 	keyExprs := make([]Expression, len(keys))
 	for i, k := range keys {
 		keyExprs[i] = String(k)
@@ -144,7 +149,7 @@ func (s *SchemaStorage) GetParametersByKeys(ctx context.Context, keys []string) 
 	stmt := SELECT(EntityParameters.AllColumns).
 		FROM(EntityParameters).
 		WHERE(
-			EntityParameters.TenantID.EQ(uuidStr(defaultTenantID)).
+			EntityParameters.TenantID.EQ(uuidStr(tenantID)).
 				AND(EntityParameters.ParameterKey.IN(keyExprs...)),
 		)
 

@@ -17,7 +17,7 @@ func NewParameterHandler(parameterService usecase.ParameterService) *ParameterHa
 }
 
 func (h *ParameterHandler) GetParameters(c *gin.Context) {
-	parameters, err := h.ParameterService.GetParameters(c)
+	parameters, err := h.ParameterService.GetParameters(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -40,7 +40,7 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 		SampleValues:  req.SampleValues,
 	}
 
-	created, err := h.ParameterService.CreateParameter(c, param)
+	created, err := h.ParameterService.CreateParameter(c.Request.Context(), param)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,7 +65,7 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 		SampleValues:  req.SampleValues,
 	}
 
-	updated, err := h.ParameterService.UpdateParameter(c, key, param)
+	updated, err := h.ParameterService.UpdateParameter(c.Request.Context(), key, param)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -76,7 +76,7 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 func (h *ParameterHandler) DeleteParameter(c *gin.Context) {
 	key := c.Param("key")
 
-	if err := h.ParameterService.DeleteParameter(c, key); err != nil {
+	if err := h.ParameterService.DeleteParameter(c.Request.Context(), key); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
