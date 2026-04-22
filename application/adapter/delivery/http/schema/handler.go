@@ -2,26 +2,21 @@ package schema
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jeremyseow/unravel-be/application/domain"
 	"github.com/jeremyseow/unravel-be/application/usecase"
 )
 
-// SchemaHandler handles schema-related operations
 type SchemaHandler struct {
 	SchemaService usecase.SchemaService
 }
 
-// NewSchemaHandler creates a new schema handler
 func NewSchemaHandler(schemaService usecase.SchemaService) *SchemaHandler {
-	return &SchemaHandler{
-		SchemaService: schemaService,
-	}
+	return &SchemaHandler{SchemaService: schemaService}
 }
 
-// CreateSchema handles the creation of a new schema
 func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 	var req SchemaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -29,54 +24,52 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 		return
 	}
 
-	if err := req.ValidateParameters(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	params := make([]domain.SchemaParameter, len(req.Parameters))
+	for i, p := range req.Parameters {
+		params[i] = domain.SchemaParameter{
+			ParameterKey: p.ParameterKey,
+			IsRequired:   p.IsRequired,
+		}
 	}
 
-	description := ""
 	schema := domain.Schema{
-		TenantID:    uuid.Nil, // TODO: Get tenant ID from context
-		SchemaKey:   req.Name, // TODO: Generate a schema key
-		Description: &description,
+		SchemaKey:   req.SchemaKey,
+		SchemaName:  req.SchemaName,
+		Description: req.Description,
+		Parameters:  params,
 	}
 
-	createdSchema, err := h.SchemaService.CreateSchema(c, schema, req.Parameters)
+	created, err := h.SchemaService.CreateSchema(c.Request.Context(), schema)
 	if err != nil {
-		if err.Error() == "schema version already exists" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "parameter keys not found in catalog") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdSchema)
+	c.JSON(http.StatusCreated, created)
 }
 
-// GetSchemas returns all versions of a schema
 func (h *SchemaHandler) GetSchemas(c *gin.Context) {
-	name := c.Param("name")
-	schemas, err := h.SchemaService.GetSchemas(c, name)
+	key := c.Param("key")
+	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, schemas)
 }
 
-// GetSchemaVersion returns a specific version of a schema
 func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
-	name := c.Param("name")
+	key := c.Param("key")
 	version := c.Param("version")
 
-	schema, err := h.SchemaService.GetSchemaVersion(c, name, version)
+	schema, err := h.SchemaService.GetSchemaVersion(c.Request.Context(), key, version)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
 		return
 	}
-
 	c.JSON(http.StatusOK, schema)
 }
-

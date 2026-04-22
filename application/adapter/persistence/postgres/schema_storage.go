@@ -3,9 +3,10 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	. "github.com/go-jet/jet/v2/postgres"
-	"github.com/google/uuid"
+	"github.com/jeremyseow/unravel-be/application/ctxkey"
 	"github.com/jeremyseow/unravel-be/application/domain"
 	"github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/model"
 	. "github.com/jeremyseow/unravel-be/db/.gen/unravel-db/public/table"
@@ -16,149 +17,183 @@ type SchemaStorage struct {
 }
 
 func NewSchemaStorage(db *sql.DB) *SchemaStorage {
-	return &SchemaStorage{
-		db: db,
-	}
+	return &SchemaStorage{db: db}
 }
 
 func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error) {
-	// For now, we will use a nil tenant_id
-	tenantID := uuid.Nil
-
-	// Insert into entity_schemas
-	stmt := EntitySchemas.INSERT(
-		EntitySchemas.TenantID,
-		EntitySchemas.SchemaKey,
-		EntitySchemas.SchemaVersion,
-		EntitySchemas.Description,
-	).VALUES(
-		tenantID,
-		schema.SchemaKey,
-		schema.SchemaVersion,
-		schema.Description,
-	).RETURNING(EntitySchemas.AllColumns)
-
-	var dbSchema model.EntitySchemas
-	err := stmt.QueryContext(ctx, s.db, &dbSchema)
+	tenantID := ctxkey.TenantID(ctx)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Schema{}, err
 	}
+	defer tx.Rollback() //nolint:errcheck
 
-	// Insert into entity_schemas_parameters_mappings
+	isLatest := false
+	lifecycle := "draft"
+
+	insertSchema := EntitySchemas.INSERT(
+		EntitySchemas.TenantID,
+		EntitySchemas.SchemaKey,
+		EntitySchemas.SchemaName_,
+		EntitySchemas.SchemaVersion,
+		EntitySchemas.Description,
+		EntitySchemas.IsLatest,
+		EntitySchemas.Lifecycle,
+	).VALUES(
+		tenantID,
+		schema.SchemaKey,
+		schema.SchemaName,
+		schema.SchemaVersion,
+		schema.Description,
+		isLatest,
+		lifecycle,
+	).RETURNING(EntitySchemas.AllColumns)
+
+	var dbSchema model.EntitySchemas
+	if err := insertSchema.QueryContext(ctx, tx, &dbSchema); err != nil {
+		return domain.Schema{}, err
+	}
+
 	if len(schema.Parameters) > 0 {
-		insertStmt := EntitySchemasParametersMappings.INSERT(
+		insertMappings := EntitySchemasParametersMappings.INSERT(
 			EntitySchemasParametersMappings.TenantID,
 			EntitySchemasParametersMappings.SchemaKey,
 			EntitySchemasParametersMappings.SchemaVersion,
 			EntitySchemasParametersMappings.ParameterKey,
+			EntitySchemasParametersMappings.IsRequired,
 		)
-		for _, paramKey := range schema.Parameters {
-			insertStmt = insertStmt.VALUES(
+		for _, p := range schema.Parameters {
+			insertMappings = insertMappings.VALUES(
 				tenantID,
 				schema.SchemaKey,
 				schema.SchemaVersion,
-				paramKey,
+				p.ParameterKey,
+				p.IsRequired,
 			)
 		}
-		_, err = insertStmt.ExecContext(ctx, s.db)
-		if err != nil {
-			// TODO: Handle potential rollback
+		if _, err := insertMappings.ExecContext(ctx, tx); err != nil {
 			return domain.Schema{}, err
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domain.Schema{}, err
 	}
 
 	return toDomainSchema(dbSchema, schema.Parameters), nil
 }
 
-func (s *SchemaStorage) GetSchemas(ctx context.Context, name string) ([]domain.Schema, error) {
-	// For now, we will use a nil tenant_id
-	tenantID := uuid.Nil
-
+func (s *SchemaStorage) GetSchemas(ctx context.Context, key string) ([]domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := SELECT(
 		EntitySchemas.AllColumns,
+		EntitySchemasParametersMappings.AllColumns,
 	).FROM(
-		EntitySchemas,
+		EntitySchemas.LEFT_JOIN(
+			EntitySchemasParametersMappings,
+			EntitySchemasParametersMappings.TenantID.EQ(EntitySchemas.TenantID).
+				AND(EntitySchemasParametersMappings.SchemaKey.EQ(EntitySchemas.SchemaKey)).
+				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(EntitySchemas.SchemaVersion)),
+		),
 	).WHERE(
-		EntitySchemas.TenantID.EQ(UUID(tenantID)).
-			AND(EntitySchemas.SchemaKey.EQ(String(name))),
+		EntitySchemas.TenantID.EQ(uuidStr(tenantID)).
+			AND(EntitySchemas.SchemaKey.EQ(String(key))),
 	)
 
-	var dbSchemas []model.EntitySchemas
-	err := stmt.QueryContext(ctx, s.db, &dbSchemas)
-	if err != nil {
+	var rows []schemaWithMappings
+	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil {
 		return nil, err
 	}
 
-	var domainSchemas []domain.Schema
-	for _, dbSchema := range dbSchemas {
-		// This is inefficient, we should do a join. For now, we will do a separate query for each schema.
-		params, err := s.getSchemaParameters(ctx, tenantID, dbSchema.SchemaKey, dbSchema.SchemaVersion)
-		if err != nil {
-			return nil, err
-		}
-		domainSchemas = append(domainSchemas, toDomainSchema(dbSchema, params))
+	schemas := make([]domain.Schema, len(rows))
+	for i, row := range rows {
+		schemas[i] = toDomainSchema(row.EntitySchemas, toSchemaParameters(row.Parameters))
 	}
-
-	return domainSchemas, nil
+	return schemas, nil
 }
 
-func (s *SchemaStorage) GetSchemaVersion(ctx context.Context, name, version string) (domain.Schema, error) {
-	// For now, we will use a nil tenant_id
-	tenantID := uuid.Nil
-
+func (s *SchemaStorage) GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
 	stmt := SELECT(
 		EntitySchemas.AllColumns,
+		EntitySchemasParametersMappings.AllColumns,
 	).FROM(
-		EntitySchemas,
+		EntitySchemas.LEFT_JOIN(
+			EntitySchemasParametersMappings,
+			EntitySchemasParametersMappings.TenantID.EQ(EntitySchemas.TenantID).
+				AND(EntitySchemasParametersMappings.SchemaKey.EQ(EntitySchemas.SchemaKey)).
+				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(EntitySchemas.SchemaVersion)),
+		),
 	).WHERE(
-		EntitySchemas.TenantID.EQ(UUID(tenantID)).
-			AND(EntitySchemas.SchemaKey.EQ(String(name))).
+		EntitySchemas.TenantID.EQ(uuidStr(tenantID)).
+			AND(EntitySchemas.SchemaKey.EQ(String(key))).
 			AND(EntitySchemas.SchemaVersion.EQ(String(version))),
 	)
 
-	var dbSchema model.EntitySchemas
-	err := stmt.QueryContext(ctx, s.db, &dbSchema)
-	if err != nil {
-		return domain.Schema{}, err
+	var rows []schemaWithMappings
+	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil || len(rows) == 0 {
+		return domain.Schema{}, fmt.Errorf("schema version not found")
 	}
-
-	params, err := s.getSchemaParameters(ctx, tenantID, dbSchema.SchemaKey, dbSchema.SchemaVersion)
-	if err != nil {
-		return domain.Schema{}, err
-	}
-
-	return toDomainSchema(dbSchema, params), nil
+	return toDomainSchema(rows[0].EntitySchemas, toSchemaParameters(rows[0].Parameters)), nil
 }
 
-func (s *SchemaStorage) getSchemaParameters(ctx context.Context, tenantID uuid.UUID, schemaKey, schemaVersion string) ([]string, error) {
-	stmt := SELECT(
-		EntitySchemasParametersMappings.ParameterKey,
-	).FROM(
-		EntitySchemasParametersMappings,
-	).WHERE(
-		EntitySchemasParametersMappings.TenantID.EQ(UUID(tenantID)).
-			AND(EntitySchemasParametersMappings.SchemaKey.EQ(String(schemaKey))).
-			AND(EntitySchemasParametersMappings.SchemaVersion.EQ(String(schemaVersion))),
-	)
+func (s *SchemaStorage) GetParametersByKeys(ctx context.Context, keys []string) ([]domain.Parameter, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	tenantID := ctxkey.TenantID(ctx)
+	keyExprs := make([]Expression, len(keys))
+	for i, k := range keys {
+		keyExprs[i] = String(k)
+	}
+	stmt := SELECT(EntityParameters.AllColumns).
+		FROM(EntityParameters).
+		WHERE(
+			EntityParameters.TenantID.EQ(uuidStr(tenantID)).
+				AND(EntityParameters.ParameterKey.IN(keyExprs...)),
+		)
 
-	var paramKeys []string
-	err := stmt.QueryContext(ctx, s.db, &paramKeys)
-	if err != nil {
+	var rows []model.EntityParameters
+	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil {
 		return nil, err
 	}
 
-	return paramKeys, nil
+	params := make([]domain.Parameter, len(rows))
+	for i, r := range rows {
+		params[i] = toDomainParameter(r)
+	}
+	return params, nil
 }
 
-func toDomainSchema(dbSchema model.EntitySchemas, params []string) domain.Schema {
+type schemaWithMappings struct {
+	model.EntitySchemas
+	Parameters []model.EntitySchemasParametersMappings
+}
+
+func toSchemaParameters(mappings []model.EntitySchemasParametersMappings) []domain.SchemaParameter {
+	params := make([]domain.SchemaParameter, len(mappings))
+	for i, m := range mappings {
+		isRequired := m.IsRequired != nil && *m.IsRequired
+		params[i] = domain.SchemaParameter{
+			ParameterKey: m.ParameterKey,
+			IsRequired:   isRequired,
+		}
+	}
+	return params
+}
+
+func toDomainSchema(r model.EntitySchemas, params []domain.SchemaParameter) domain.Schema {
 	return domain.Schema{
-		ID:            dbSchema.ID,
-		TenantID:      dbSchema.TenantID,
-		SchemaKey:     dbSchema.SchemaKey,
-		SchemaVersion: dbSchema.SchemaVersion,
-		Description:   dbSchema.Description,
+		ID:            r.ID,
+		TenantID:      r.TenantID,
+		SchemaKey:     r.SchemaKey,
+		SchemaName:    r.SchemaName,
+		SchemaVersion: r.SchemaVersion,
+		Description:   r.Description,
+		IsLatest:      r.IsLatest,
+		Lifecycle:     r.Lifecycle,
 		Parameters:    params,
-		CreatedAt:     dbSchema.CreatedAt,
-		UpdatedAt:     dbSchema.UpdatedAt,
+		CreatedAt:     r.CreatedAt,
+		UpdatedAt:     r.UpdatedAt,
 	}
 }
