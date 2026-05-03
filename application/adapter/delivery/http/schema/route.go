@@ -8,6 +8,7 @@ func RegisterRoutes(router *gin.RouterGroup, schemaHandler *SchemaHandler) {
 	schemaGroup := router.Group("/schemas")
 	{
 		schemaGroup.POST("", schemaHandler.CreateSchema)
+		schemaGroup.GET("", schemaHandler.ListSchemas)
 		schemaGroup.GET("/:key", schemaHandler.GetSchemas)
 		schemaGroup.GET("/:key/versions/:version", schemaHandler.GetSchemaVersion)
 		schemaGroup.POST("/:key/publish", schemaHandler.PublishSchema)

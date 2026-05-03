@@ -89,3 +89,102 @@ func toParamMap(params []domain.SchemaParameter) map[string]bool {
 	}
 	return m
 }
+
+// annotateChanges sorts schemas by semver ascending (draft last) and attaches a
+// SchemaChanges diff to each version that has a predecessor.
+func annotateChanges(schemas []domain.Schema) []domain.Schema {
+	if len(schemas) < 2 {
+		return schemas
+	}
+
+	published := make([]domain.Schema, 0, len(schemas))
+	var draft *domain.Schema
+	for i := range schemas {
+		if schemas[i].SchemaVersion == domain.DraftVersion {
+			copy := schemas[i]
+			draft = &copy
+		} else {
+			published = append(published, schemas[i])
+		}
+	}
+
+	// Sort published versions oldest → newest by semver.
+	sortSemverAsc(published)
+
+	// Compute changes for each published version after the first.
+	for i := 1; i < len(published); i++ {
+		changes := diffParams(published[i-1].Parameters, published[i].Parameters)
+		published[i].Changes = &changes
+	}
+
+	result := published
+
+	// Draft changes are computed vs the latest published version.
+	if draft != nil {
+		if len(published) > 0 {
+			changes := diffParams(published[len(published)-1].Parameters, draft.Parameters)
+			draft.Changes = &changes
+		}
+		result = append(result, *draft)
+	}
+
+	return result
+}
+
+func diffParams(old, next []domain.SchemaParameter) domain.SchemaChanges {
+	oldMap := toParamMap(old)
+	nextMap := toParamMap(next)
+
+	var added, removed, promoted, demoted []string
+
+	for key, nextRequired := range nextMap {
+		oldRequired, existed := oldMap[key]
+		if !existed {
+			added = append(added, key)
+			continue
+		}
+		if !oldRequired && nextRequired {
+			promoted = append(promoted, key)
+		} else if oldRequired && !nextRequired {
+			demoted = append(demoted, key)
+		}
+	}
+	for key := range oldMap {
+		if _, exists := nextMap[key]; !exists {
+			removed = append(removed, key)
+		}
+	}
+
+	bump := determineBump(old, next)
+	return domain.SchemaChanges{
+		BumpType:       bump,
+		AddedParams:    added,
+		RemovedParams:  removed,
+		PromotedParams: promoted,
+		DemotedParams:  demoted,
+	}
+}
+
+func sortSemverAsc(schemas []domain.Schema) {
+	for i := 1; i < len(schemas); i++ {
+		for j := i; j > 0 && semverLess(schemas[j].SchemaVersion, schemas[j-1].SchemaVersion); j-- {
+			schemas[j], schemas[j-1] = schemas[j-1], schemas[j]
+		}
+	}
+}
+
+// semverLess returns true when a is an earlier release than b.
+func semverLess(a, b string) bool {
+	ma, mia, pa, err1 := parseSemver(a)
+	mb, mib, pb, err2 := parseSemver(b)
+	if err1 != nil || err2 != nil {
+		return a < b
+	}
+	if ma != mb {
+		return ma < mb
+	}
+	if mia != mib {
+		return mia < mib
+	}
+	return pa < pb
+}

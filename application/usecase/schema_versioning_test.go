@@ -204,3 +204,83 @@ func TestParseSemver(t *testing.T) {
 		})
 	}
 }
+
+func TestAnnotateChanges(t *testing.T) {
+	paramA := domain.SchemaParameter{ParameterKey: "a", IsRequired: true}
+	paramB := domain.SchemaParameter{ParameterKey: "b", IsRequired: false}
+	paramC := domain.SchemaParameter{ParameterKey: "c", IsRequired: true}
+
+	tests := []struct {
+		name    string
+		input   []domain.Schema
+		asserts func(t *testing.T, got []domain.Schema)
+	}{
+		{
+			name:    "single version — no changes",
+			input:   []domain.Schema{{SchemaVersion: "1.0.0", Parameters: []domain.SchemaParameter{paramA}}},
+			asserts: func(t *testing.T, got []domain.Schema) { assert.Nil(t, got[0].Changes) },
+		},
+		{
+			name: "two published versions — second has changes",
+			input: []domain.Schema{
+				{SchemaVersion: "1.0.0", Parameters: []domain.SchemaParameter{paramA}},
+				{SchemaVersion: "1.1.0", Parameters: []domain.SchemaParameter{paramA, paramB}},
+			},
+			asserts: func(t *testing.T, got []domain.Schema) {
+				require.Len(t, got, 2)
+				assert.Nil(t, got[0].Changes)
+				require.NotNil(t, got[1].Changes)
+				assert.Equal(t, "minor", got[1].Changes.BumpType)
+				assert.Equal(t, []string{"b"}, got[1].Changes.AddedParams)
+			},
+		},
+		{
+			name: "out-of-order input — sorted before annotating",
+			input: []domain.Schema{
+				{SchemaVersion: "2.0.0", Parameters: []domain.SchemaParameter{paramA, paramC}},
+				{SchemaVersion: "1.0.0", Parameters: []domain.SchemaParameter{paramA}},
+			},
+			asserts: func(t *testing.T, got []domain.Schema) {
+				require.Len(t, got, 2)
+				assert.Equal(t, "1.0.0", got[0].SchemaVersion)
+				assert.Nil(t, got[0].Changes)
+				assert.Equal(t, "2.0.0", got[1].SchemaVersion)
+				require.NotNil(t, got[1].Changes)
+				assert.Equal(t, "major", got[1].Changes.BumpType)
+			},
+		},
+		{
+			name: "draft included — appears last with changes vs latest published",
+			input: []domain.Schema{
+				{SchemaVersion: "1.0.0", Parameters: []domain.SchemaParameter{paramA}},
+				{SchemaVersion: domain.DraftVersion, Parameters: []domain.SchemaParameter{paramA, paramB}},
+			},
+			asserts: func(t *testing.T, got []domain.Schema) {
+				require.Len(t, got, 2)
+				assert.Equal(t, "1.0.0", got[0].SchemaVersion)
+				assert.Equal(t, domain.DraftVersion, got[1].SchemaVersion)
+				require.NotNil(t, got[1].Changes)
+				assert.Equal(t, "minor", got[1].Changes.BumpType)
+				assert.Equal(t, []string{"b"}, got[1].Changes.AddedParams)
+			},
+		},
+		{
+			name: "removed parameter shows in removed_params",
+			input: []domain.Schema{
+				{SchemaVersion: "1.0.0", Parameters: []domain.SchemaParameter{paramA, paramB}},
+				{SchemaVersion: "2.0.0", Parameters: []domain.SchemaParameter{paramA}},
+			},
+			asserts: func(t *testing.T, got []domain.Schema) {
+				require.NotNil(t, got[1].Changes)
+				assert.Equal(t, "major", got[1].Changes.BumpType)
+				assert.Equal(t, []string{"b"}, got[1].Changes.RemovedParams)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.asserts(t, annotateChanges(tt.input))
+		})
+	}
+}

@@ -47,6 +47,23 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
+func (h *SchemaHandler) ListSchemas(c *gin.Context) {
+	filter := domain.ListSchemasFilter{}
+	if lc := c.Query("lifecycle"); lc != "" {
+		filter.Lifecycle = &lc
+	}
+	if name := c.Query("name"); name != "" {
+		filter.Name = &name
+	}
+
+	schemas, err := h.SchemaService.ListSchemas(c.Request.Context(), filter)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, schemas)
+}
+
 func (h *SchemaHandler) GetSchemas(c *gin.Context) {
 	key := c.Param("key")
 	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)

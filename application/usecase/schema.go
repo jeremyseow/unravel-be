@@ -9,6 +9,7 @@ import (
 
 type SchemaService interface {
 	CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error)
+	ListSchemas(ctx context.Context, filter domain.ListSchemasFilter) ([]domain.Schema, error)
 	GetSchemas(ctx context.Context, key string) ([]domain.Schema, error)
 	GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error)
 	PublishSchema(ctx context.Context, key string) (domain.Schema, error)
@@ -17,6 +18,7 @@ type SchemaService interface {
 
 type SchemaRepository interface {
 	CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error)
+	ListSchemas(ctx context.Context, filter domain.ListSchemasFilter) ([]domain.Schema, error)
 	GetSchemas(ctx context.Context, key string) ([]domain.Schema, error)
 	GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error)
 	GetParametersByKeys(ctx context.Context, keys []string) ([]domain.Parameter, error)
@@ -53,8 +55,16 @@ func (s *schemaService) CreateSchema(ctx context.Context, schema domain.Schema) 
 	return s.repo.CreateSchema(ctx, schema)
 }
 
+func (s *schemaService) ListSchemas(ctx context.Context, filter domain.ListSchemasFilter) ([]domain.Schema, error) {
+	return s.repo.ListSchemas(ctx, filter)
+}
+
 func (s *schemaService) GetSchemas(ctx context.Context, key string) ([]domain.Schema, error) {
-	return s.repo.GetSchemas(ctx, key)
+	schemas, err := s.repo.GetSchemas(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return annotateChanges(schemas), nil
 }
 
 func (s *schemaService) GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error) {
