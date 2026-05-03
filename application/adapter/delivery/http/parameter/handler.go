@@ -17,20 +17,19 @@ func NewParameterHandler(parameterService usecase.ParameterService) *ParameterHa
 	return &ParameterHandler{ParameterService: parameterService}
 }
 
-func (h *ParameterHandler) GetParameters(c *gin.Context) {
+func (h *ParameterHandler) GetParameters(c *gin.Context) error {
 	parameters, err := h.ParameterService.GetParameters(c.Request.Context())
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusOK, gin.H{"data": parameters})
+	return nil
 }
 
-func (h *ParameterHandler) CreateParameter(c *gin.Context) {
+func (h *ParameterHandler) CreateParameter(c *gin.Context) error {
 	var req ParameterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apierror.Validation(c, err)
-		return
+		return apierror.ValidationError(err)
 	}
 
 	param := domain.Parameter{
@@ -43,19 +42,18 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 
 	created, err := h.ParameterService.CreateParameter(c.Request.Context(), param)
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusCreated, created)
+	return nil
 }
 
-func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
+func (h *ParameterHandler) UpdateParameter(c *gin.Context) error {
 	key := c.Param("key")
 
 	var req ParameterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apierror.Validation(c, err)
-		return
+		return apierror.ValidationError(err)
 	}
 
 	param := domain.Parameter{
@@ -68,18 +66,18 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	updated, err := h.ParameterService.UpdateParameter(c.Request.Context(), key, param)
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusOK, updated)
+	return nil
 }
 
-func (h *ParameterHandler) DeleteParameter(c *gin.Context) {
+func (h *ParameterHandler) DeleteParameter(c *gin.Context) error {
 	key := c.Param("key")
 
 	if err := h.ParameterService.DeleteParameter(c.Request.Context(), key); err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.Status(http.StatusNoContent)
+	return nil
 }

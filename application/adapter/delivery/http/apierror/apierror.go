@@ -11,6 +11,29 @@ import (
 	"github.com/jeremyseow/unravel-be/application/domain"
 )
 
+// HandlerFunc is a gin handler that returns an error. Use Wrap to register it.
+type HandlerFunc func(*gin.Context) error
+
+// Wrap converts a HandlerFunc into a gin.HandlerFunc, routing any returned
+// error through Handle.
+func Wrap(h HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := h(c); err != nil {
+			Handle(c, err)
+		}
+	}
+}
+
+// ValidationError wraps err so Handle treats it as a 400 validation response.
+func ValidationError(err error) error {
+	return &validationErr{err: err}
+}
+
+type validationErr struct{ err error }
+
+func (e *validationErr) Error() string { return e.err.Error() }
+func (e *validationErr) Unwrap() error { return e.err }
+
 type fieldError struct {
 	Field   string `json:"field,omitempty"`
 	Message string `json:"message"`
@@ -23,7 +46,10 @@ type errorResponse struct {
 // Handle maps a domain error to the appropriate HTTP response. Add new sentinel
 // errors here as the domain grows; handlers never need to change.
 func Handle(c *gin.Context, err error) {
+	var ve *validationErr
 	switch {
+	case errors.As(err, &ve):
+		Validation(c, ve.err)
 	case errors.Is(err, domain.ErrNotFound):
 		NotFound(c, err)
 	case errors.Is(err, domain.ErrInvalidDataType),
@@ -34,8 +60,7 @@ func Handle(c *gin.Context, err error) {
 	}
 }
 
-// Validation handles errors from ShouldBindJSON, expanding validator.ValidationErrors
-// into per-field messages. Falls back to a single message for non-validation errors.
+// Validation writes a 400 with per-field detail from a validator.ValidationErrors.
 func Validation(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, errorResponse{Errors: formatValidation(err)})
 }

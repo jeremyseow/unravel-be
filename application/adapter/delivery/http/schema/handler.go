@@ -17,11 +17,10 @@ func NewSchemaHandler(schemaService usecase.SchemaService) *SchemaHandler {
 	return &SchemaHandler{SchemaService: schemaService}
 }
 
-func (h *SchemaHandler) CreateSchema(c *gin.Context) {
+func (h *SchemaHandler) CreateSchema(c *gin.Context) error {
 	var req SchemaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apierror.Validation(c, err)
-		return
+		return apierror.ValidationError(err)
 	}
 
 	params := make([]domain.SchemaParameter, len(req.Parameters))
@@ -41,30 +40,30 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 
 	created, err := h.SchemaService.CreateSchema(c.Request.Context(), schema)
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusCreated, created)
+	return nil
 }
 
-func (h *SchemaHandler) GetSchemas(c *gin.Context) {
+func (h *SchemaHandler) GetSchemas(c *gin.Context) error {
 	key := c.Param("key")
 	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusOK, schemas)
+	return nil
 }
 
-func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
+func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) error {
 	key := c.Param("key")
 	version := c.Param("version")
 
 	schema, err := h.SchemaService.GetSchemaVersion(c.Request.Context(), key, version)
 	if err != nil {
-		apierror.Handle(c, err)
-		return
+		return err
 	}
 	c.JSON(http.StatusOK, schema)
+	return nil
 }
