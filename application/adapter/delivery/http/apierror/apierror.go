@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/jeremyseow/unravel-be/application/domain"
 )
 
 type fieldError struct {
@@ -17,6 +18,20 @@ type fieldError struct {
 
 type errorResponse struct {
 	Errors []fieldError `json:"errors"`
+}
+
+// Handle maps a domain error to the appropriate HTTP response. Add new sentinel
+// errors here as the domain grows; handlers never need to change.
+func Handle(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrNotFound):
+		NotFound(c, err)
+	case errors.Is(err, domain.ErrInvalidDataType),
+		errors.Is(err, domain.ErrParameterKeysNotFound):
+		BadRequest(c, err)
+	default:
+		Internal(c, err)
+	}
 }
 
 // Validation handles errors from ShouldBindJSON, expanding validator.ValidationErrors

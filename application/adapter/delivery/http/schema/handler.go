@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -42,11 +41,7 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 
 	created, err := h.SchemaService.CreateSchema(c.Request.Context(), schema)
 	if err != nil {
-		if errors.Is(err, domain.ErrParameterKeysNotFound) {
-			apierror.BadRequest(c, err)
-		} else {
-			apierror.Internal(c, err)
-		}
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, created)
@@ -56,7 +51,7 @@ func (h *SchemaHandler) GetSchemas(c *gin.Context) {
 	key := c.Param("key")
 	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)
 	if err != nil {
-		apierror.Internal(c, err)
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, schemas)
@@ -68,11 +63,7 @@ func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
 
 	schema, err := h.SchemaService.GetSchemaVersion(c.Request.Context(), key, version)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			apierror.NotFound(c, err)
-		} else {
-			apierror.Internal(c, err)
-		}
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, schema)

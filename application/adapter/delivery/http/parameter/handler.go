@@ -1,7 +1,6 @@
 package parameter
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +20,7 @@ func NewParameterHandler(parameterService usecase.ParameterService) *ParameterHa
 func (h *ParameterHandler) GetParameters(c *gin.Context) {
 	parameters, err := h.ParameterService.GetParameters(c.Request.Context())
 	if err != nil {
-		apierror.Internal(c, err)
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": parameters})
@@ -44,11 +43,7 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 
 	created, err := h.ParameterService.CreateParameter(c.Request.Context(), param)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidDataType) {
-			apierror.BadRequest(c, err)
-		} else {
-			apierror.Internal(c, err)
-		}
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, created)
@@ -73,14 +68,7 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	updated, err := h.ParameterService.UpdateParameter(c.Request.Context(), key, param)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrInvalidDataType):
-			apierror.BadRequest(c, err)
-		case errors.Is(err, domain.ErrNotFound):
-			apierror.NotFound(c, err)
-		default:
-			apierror.Internal(c, err)
-		}
+		apierror.Handle(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -90,11 +78,7 @@ func (h *ParameterHandler) DeleteParameter(c *gin.Context) {
 	key := c.Param("key")
 
 	if err := h.ParameterService.DeleteParameter(c.Request.Context(), key); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			apierror.NotFound(c, err)
-		} else {
-			apierror.Internal(c, err)
-		}
+		apierror.Handle(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
