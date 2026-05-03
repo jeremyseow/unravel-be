@@ -13,7 +13,7 @@ CREATE TABLE entity_parameters (
 
 	CONSTRAINT constraint_data_type_valid
     CHECK (data_type IN (
-        'string', 'integer', 'float', 'boolean', 'timestamp', 'bytes',
+        'string', 'integer', 'float', 'boolean', 'timestamp', 'bytes', 'json',
         'string_array', 'integer_array', 'float_array', 'boolean_array'
     ))
 );

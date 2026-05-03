@@ -7,6 +7,7 @@ const (
 	DataTypeBoolean      = "boolean"
 	DataTypeTimestamp    = "timestamp"
 	DataTypeBytes        = "bytes"
+	DataTypeJSON         = "json"
 	DataTypeStringArray  = "string_array"
 	DataTypeIntegerArray = "integer_array"
 	DataTypeFloatArray   = "float_array"
@@ -20,6 +21,7 @@ var validDataTypes = map[string]struct{}{
 	DataTypeBoolean:      {},
 	DataTypeTimestamp:    {},
 	DataTypeBytes:        {},
+	DataTypeJSON:         {},
 	DataTypeStringArray:  {},
 	DataTypeIntegerArray: {},
 	DataTypeFloatArray:   {},
@@ -40,6 +42,7 @@ var ProtoType = map[string]string{
 	DataTypeBoolean:      "bool",
 	DataTypeTimestamp:    "int64",
 	DataTypeBytes:        "bytes",
+	DataTypeJSON:         "google.protobuf.Struct",
 	DataTypeStringArray:  "repeated string",
 	DataTypeIntegerArray: "repeated int64",
 	DataTypeFloatArray:   "repeated double",
