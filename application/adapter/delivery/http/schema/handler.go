@@ -68,3 +68,26 @@ func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, schema)
 }
+
+func (h *SchemaHandler) PublishSchema(c *gin.Context) {
+	key := c.Param("key")
+
+	published, err := h.SchemaService.PublishSchema(c.Request.Context(), key)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, published)
+}
+
+func (h *SchemaHandler) DeprecateSchema(c *gin.Context) {
+	key := c.Param("key")
+	version := c.Param("version")
+
+	deprecated, err := h.SchemaService.DeprecateSchema(c.Request.Context(), key, version)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, deprecated)
+}

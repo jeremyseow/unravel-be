@@ -7,14 +7,12 @@ import (
 	"github.com/jeremyseow/unravel-be/application/domain"
 )
 
-// DraftVersion is the semver placeholder for every new draft.
-// The DB check constraint requires semver format, so 0.0.0 is used.
-const DraftVersion = "0.0.0"
-
 type SchemaService interface {
 	CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error)
 	GetSchemas(ctx context.Context, key string) ([]domain.Schema, error)
 	GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error)
+	PublishSchema(ctx context.Context, key string) (domain.Schema, error)
+	DeprecateSchema(ctx context.Context, key, version string) (domain.Schema, error)
 }
 
 type SchemaRepository interface {
@@ -22,6 +20,9 @@ type SchemaRepository interface {
 	GetSchemas(ctx context.Context, key string) ([]domain.Schema, error)
 	GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error)
 	GetParametersByKeys(ctx context.Context, keys []string) ([]domain.Parameter, error)
+	GetLatestActiveSchema(ctx context.Context, key string) (*domain.Schema, error)
+	PublishSchema(ctx context.Context, key, newVersion string) (domain.Schema, error)
+	DeprecateSchema(ctx context.Context, key, version string) (domain.Schema, error)
 }
 
 type schemaService struct {
@@ -33,7 +34,6 @@ func NewSchemaService(repo SchemaRepository) SchemaService {
 }
 
 func (s *schemaService) CreateSchema(ctx context.Context, schema domain.Schema) (domain.Schema, error) {
-	// Validate that all referenced parameter keys exist in the catalog.
 	if len(schema.Parameters) > 0 {
 		keys := make([]string, len(schema.Parameters))
 		for i, p := range schema.Parameters {
@@ -48,7 +48,7 @@ func (s *schemaService) CreateSchema(ctx context.Context, schema domain.Schema) 
 		}
 	}
 
-	schema.SchemaVersion = DraftVersion
+	schema.SchemaVersion = domain.DraftVersion
 
 	return s.repo.CreateSchema(ctx, schema)
 }
@@ -59,4 +59,27 @@ func (s *schemaService) GetSchemas(ctx context.Context, key string) ([]domain.Sc
 
 func (s *schemaService) GetSchemaVersion(ctx context.Context, key, version string) (domain.Schema, error) {
 	return s.repo.GetSchemaVersion(ctx, key, version)
+}
+
+func (s *schemaService) PublishSchema(ctx context.Context, key string) (domain.Schema, error) {
+	draft, err := s.repo.GetSchemaVersion(ctx, key, domain.DraftVersion)
+	if err != nil {
+		return domain.Schema{}, err
+	}
+
+	latest, err := s.repo.GetLatestActiveSchema(ctx, key)
+	if err != nil {
+		return domain.Schema{}, err
+	}
+
+	newVersion, err := computeNextVersion(latest, draft)
+	if err != nil {
+		return domain.Schema{}, err
+	}
+
+	return s.repo.PublishSchema(ctx, key, newVersion)
+}
+
+func (s *schemaService) DeprecateSchema(ctx context.Context, key, version string) (domain.Schema, error) {
+	return s.repo.DeprecateSchema(ctx, key, version)
 }

@@ -36,6 +36,10 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 			case errors.Is(err, domain.ErrParameterKeysNotFound):
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
+			case errors.Is(err, domain.ErrSchemaNotDraft),
+				errors.Is(err, domain.ErrSchemaNotActive):
+				c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+				return
 			default:
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
