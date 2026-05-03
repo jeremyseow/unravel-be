@@ -294,6 +294,13 @@ github.com/sagikazarmark/locafero
 # github.com/sagikazarmark/slog-shim v0.1.0
 ## explicit; go 1.20
 github.com/sagikazarmark/slog-shim
+# github.com/samber/lo v1.53.0
+## explicit; go 1.18
+github.com/samber/lo
+github.com/samber/lo/internal/constraints
+github.com/samber/lo/internal/xrand
+github.com/samber/lo/internal/xtime
+github.com/samber/lo/mutable
 # github.com/shirou/gopsutil/v4 v4.26.3
 ## explicit; go 1.24.0
 github.com/shirou/gopsutil/v4/common
@@ -467,10 +474,12 @@ golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
 # golang.org/x/text v0.34.0
 ## explicit; go 1.24.0
+golang.org/x/text/cases
 golang.org/x/text/encoding
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/internal/identifier
 golang.org/x/text/encoding/unicode
+golang.org/x/text/internal
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag

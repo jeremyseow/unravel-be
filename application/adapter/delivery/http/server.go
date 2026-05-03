@@ -17,7 +17,7 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config, services *usecase.AllServices) *Server {
-	httpRouter := gin.Default()
+	httpRouter := gin.Default() // consider to use custom logger instead of default gin logger
 	allHandlers := NewAllHandlers(cfg, services)
 	SetupRoutes(httpRouter, allHandlers)
 

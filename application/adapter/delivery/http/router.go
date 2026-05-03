@@ -17,7 +17,7 @@ func SetupRoutes(httpRouter *gin.Engine, allHandlers *AllHandlers) {
 	})
 
 	api := httpRouter.Group("/")
-	api.Use(middleware.TenantMiddleware())
+	api.Use(middleware.TenantMiddleware(), middleware.ErrorHandlerMiddleware())
 
 	schema.RegisterRoutes(api, allHandlers.SchemaHandler)
 	parameter.RegisterRoutes(api, allHandlers.ParameterHandler)

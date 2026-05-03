@@ -2,7 +2,6 @@ package schema
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jeremyseow/unravel-be/application/domain"
@@ -20,7 +19,7 @@ func NewSchemaHandler(schemaService usecase.SchemaService) *SchemaHandler {
 func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 	var req SchemaRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -41,11 +40,7 @@ func (h *SchemaHandler) CreateSchema(c *gin.Context) {
 
 	created, err := h.SchemaService.CreateSchema(c.Request.Context(), schema)
 	if err != nil {
-		if strings.Contains(err.Error(), "parameter keys not found in catalog") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 
@@ -56,7 +51,7 @@ func (h *SchemaHandler) GetSchemas(c *gin.Context) {
 	key := c.Param("key")
 	schemas, err := h.SchemaService.GetSchemas(c.Request.Context(), key)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, schemas)
@@ -68,7 +63,7 @@ func (h *SchemaHandler) GetSchemaVersion(c *gin.Context) {
 
 	schema, err := h.SchemaService.GetSchemaVersion(c.Request.Context(), key, version)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "version not found"})
+		c.Error(err)
 		return
 	}
 	c.JSON(http.StatusOK, schema)

@@ -5,8 +5,10 @@ go 1.25.0
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-jet/jet/v2 v2.11.1
+	github.com/go-playground/validator/v10 v10.20.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
+	github.com/samber/lo v1.53.0
 	github.com/spf13/viper v1.19.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 )
@@ -40,7 +42,6 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
