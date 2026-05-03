@@ -44,7 +44,7 @@ func (s *schemaService) CreateSchema(ctx context.Context, schema domain.Schema) 
 			return domain.Schema{}, fmt.Errorf("validating parameters: %w", err)
 		}
 		if len(found) != len(keys) {
-			return domain.Schema{}, fmt.Errorf("parameter keys not found in catalog")
+			return domain.Schema{}, fmt.Errorf("one or more parameter keys do not exist in the catalog: %w", domain.ErrParameterKeysNotFound)
 		}
 	}
 

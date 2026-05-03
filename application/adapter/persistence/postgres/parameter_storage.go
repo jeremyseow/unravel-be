@@ -85,7 +85,7 @@ func (s *ParameterStorage) UpdateParameter(ctx context.Context, key string, para
 		return domain.Parameter{}, err
 	}
 	if row.ParameterKey == "" {
-		return domain.Parameter{}, fmt.Errorf("parameter not found: %s", key)
+		return domain.Parameter{}, fmt.Errorf("parameter %q: %w", key, domain.ErrNotFound)
 	}
 	return toDomainParameter(row), nil
 }
@@ -105,7 +105,7 @@ func (s *ParameterStorage) DeleteParameter(ctx context.Context, key string) erro
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("parameter not found: %s", key)
+		return fmt.Errorf("parameter %q: %w", key, domain.ErrNotFound)
 	}
 	return nil
 }

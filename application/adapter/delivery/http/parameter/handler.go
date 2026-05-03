@@ -1,10 +1,11 @@
 package parameter
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http/apierror"
 	"github.com/jeremyseow/unravel-be/application/domain"
 	"github.com/jeremyseow/unravel-be/application/usecase"
 )
@@ -20,7 +21,7 @@ func NewParameterHandler(parameterService usecase.ParameterService) *ParameterHa
 func (h *ParameterHandler) GetParameters(c *gin.Context) {
 	parameters, err := h.ParameterService.GetParameters(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		apierror.Internal(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": parameters})
@@ -29,7 +30,7 @@ func (h *ParameterHandler) GetParameters(c *gin.Context) {
 func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 	var req ParameterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierror.Validation(c, err)
 		return
 	}
 
@@ -43,11 +44,11 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 
 	created, err := h.ParameterService.CreateParameter(c.Request.Context(), param)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if strings.HasPrefix(err.Error(), "invalid data type") {
-			status = http.StatusBadRequest
+		if errors.Is(err, domain.ErrInvalidDataType) {
+			apierror.BadRequest(c, err)
+		} else {
+			apierror.Internal(c, err)
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, created)
@@ -58,7 +59,7 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	var req ParameterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		apierror.Validation(c, err)
 		return
 	}
 
@@ -72,11 +73,14 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	updated, err := h.ParameterService.UpdateParameter(c.Request.Context(), key, param)
 	if err != nil {
-		status := http.StatusNotFound
-		if strings.HasPrefix(err.Error(), "invalid data type") {
-			status = http.StatusBadRequest
+		switch {
+		case errors.Is(err, domain.ErrInvalidDataType):
+			apierror.BadRequest(c, err)
+		case errors.Is(err, domain.ErrNotFound):
+			apierror.NotFound(c, err)
+		default:
+			apierror.Internal(c, err)
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, updated)
@@ -86,7 +90,11 @@ func (h *ParameterHandler) DeleteParameter(c *gin.Context) {
 	key := c.Param("key")
 
 	if err := h.ParameterService.DeleteParameter(c.Request.Context(), key); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrNotFound) {
+			apierror.NotFound(c, err)
+		} else {
+			apierror.Internal(c, err)
+		}
 		return
 	}
 	c.Status(http.StatusNoContent)

@@ -132,7 +132,7 @@ func (s *SchemaStorage) GetSchemaVersion(ctx context.Context, key, version strin
 
 	var rows []schemaWithMappings
 	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil || len(rows) == 0 {
-		return domain.Schema{}, fmt.Errorf("schema version not found")
+		return domain.Schema{}, fmt.Errorf("schema %q version %q: %w", key, version, domain.ErrNotFound)
 	}
 	return toDomainSchema(rows[0].EntitySchemas, toSchemaParameters(rows[0].Parameters)), nil
 }
