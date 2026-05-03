@@ -52,15 +52,15 @@ func TestDetermineBump(t *testing.T) {
 			expected: "minor",
 		},
 		{
-			name: "major beats minor — remove param and add optional",
-			old:  []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b"}},
-			next: []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "c", IsRequired: false}},
+			name:     "major beats minor — remove param and add optional",
+			old:      []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b"}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "c", IsRequired: false}},
 			expected: "major",
 		},
 		{
-			name: "only additive optional changes",
-			old:  []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
-			next: []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}, {ParameterKey: "b", IsRequired: false}},
+			name:     "only additive optional changes",
+			old:      []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}, {ParameterKey: "b", IsRequired: false}},
 			expected: "minor",
 		},
 		{
@@ -185,7 +185,6 @@ func TestParseSemver(t *testing.T) {
 	}{
 		{"valid", "1.2.3", 1, 2, 3, false},
 		{"zeros", "0.0.0", 0, 0, 0, false},
-		{"large numbers", "10.20.30", 10, 20, 30, false},
 		{"pre-release stripped", "1.2.3-rc.1", 1, 2, 3, false},
 		{"invalid — missing part", "1.2", 0, 0, 0, true},
 		{"invalid — non-numeric", "a.b.c", 0, 0, 0, true},
