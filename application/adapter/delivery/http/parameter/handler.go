@@ -2,6 +2,7 @@ package parameter
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jeremyseow/unravel-be/application/domain"
@@ -42,7 +43,11 @@ func (h *ParameterHandler) CreateParameter(c *gin.Context) {
 
 	created, err := h.ParameterService.CreateParameter(c.Request.Context(), param)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		status := http.StatusInternalServerError
+		if strings.HasPrefix(err.Error(), "invalid data type") {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, created)
@@ -67,7 +72,11 @@ func (h *ParameterHandler) UpdateParameter(c *gin.Context) {
 
 	updated, err := h.ParameterService.UpdateParameter(c.Request.Context(), key, param)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		status := http.StatusNotFound
+		if strings.HasPrefix(err.Error(), "invalid data type") {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, updated)

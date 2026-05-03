@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jeremyseow/unravel-be/application/domain"
 )
@@ -33,10 +34,16 @@ func (s *parameterService) GetParameters(ctx context.Context) ([]domain.Paramete
 }
 
 func (s *parameterService) CreateParameter(ctx context.Context, param domain.Parameter) (domain.Parameter, error) {
+	if !domain.IsValidDataType(param.DataType) {
+		return domain.Parameter{}, fmt.Errorf("invalid data type: %q", param.DataType)
+	}
 	return s.repo.CreateParameter(ctx, param)
 }
 
 func (s *parameterService) UpdateParameter(ctx context.Context, key string, param domain.Parameter) (domain.Parameter, error) {
+	if !domain.IsValidDataType(param.DataType) {
+		return domain.Parameter{}, fmt.Errorf("invalid data type: %q", param.DataType)
+	}
 	return s.repo.UpdateParameter(ctx, key, param)
 }
 
