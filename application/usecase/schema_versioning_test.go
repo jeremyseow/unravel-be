@@ -8,18 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func params(keys ...string) []domain.SchemaParameter {
-	p := make([]domain.SchemaParameter, len(keys))
-	for i, k := range keys {
-		required := k[0] == '!'
-		if required {
-			k = k[1:]
-		}
-		p[i] = domain.SchemaParameter{ParameterKey: k, IsRequired: required}
-	}
-	return p
-}
-
 func TestDetermineBump(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -29,68 +17,68 @@ func TestDetermineBump(t *testing.T) {
 	}{
 		{
 			name:     "no structural change",
-			old:      params("a"),
-			next:     params("a"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a", IsRequired: false}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: false}},
 			expected: "patch",
 		},
 		{
 			name:     "parameter removed",
-			old:      params("a", "b"),
-			next:     params("a"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b"}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a"}},
 			expected: "major",
 		},
 		{
 			name:     "new required parameter",
-			old:      params("a"),
-			next:     params("a", "!b"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a"}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b", IsRequired: true}},
 			expected: "major",
 		},
 		{
 			name:     "optional to required",
-			old:      params("a"),
-			next:     params("!a"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a", IsRequired: false}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
 			expected: "major",
 		},
 		{
 			name:     "new optional parameter",
-			old:      params("a"),
-			next:     params("a", "b"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a"}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b", IsRequired: false}},
 			expected: "minor",
 		},
 		{
 			name:     "required to optional",
-			old:      params("!a"),
-			next:     params("a"),
+			old:      []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: false}},
 			expected: "minor",
 		},
 		{
-			name:     "major beats minor — remove param and add optional",
-			old:      params("a", "b"),
-			next:     params("a", "c"),
+			name: "major beats minor — remove param and add optional",
+			old:  []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b"}},
+			next: []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "c", IsRequired: false}},
 			expected: "major",
 		},
 		{
-			name:     "only additive optional changes",
-			old:      params("!a"),
-			next:     params("!a", "b"),
+			name: "only additive optional changes",
+			old:  []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
+			next: []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}, {ParameterKey: "b", IsRequired: false}},
 			expected: "minor",
 		},
 		{
 			name:     "empty to empty",
-			old:      params(),
-			next:     params(),
+			old:      []domain.SchemaParameter{},
+			next:     []domain.SchemaParameter{},
 			expected: "patch",
 		},
 		{
 			name:     "first parameter added as optional",
-			old:      params(),
-			next:     params("a"),
+			old:      []domain.SchemaParameter{},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: false}},
 			expected: "minor",
 		},
 		{
 			name:     "first parameter added as required",
-			old:      params(),
-			next:     params("!a"),
+			old:      []domain.SchemaParameter{},
+			next:     []domain.SchemaParameter{{ParameterKey: "a", IsRequired: true}},
 			expected: "major",
 		},
 	}
@@ -127,10 +115,6 @@ func TestApplyBump(t *testing.T) {
 }
 
 func TestComputeNextVersion(t *testing.T) {
-	active := func(version string, p ...string) *domain.Schema {
-		return &domain.Schema{SchemaVersion: version, Parameters: params(p...)}
-	}
-
 	tests := []struct {
 		name     string
 		latest   *domain.Schema
@@ -140,31 +124,43 @@ func TestComputeNextVersion(t *testing.T) {
 		{
 			name:     "first publish — no active version",
 			latest:   nil,
-			draft:    domain.Schema{Parameters: params("a")},
+			draft:    domain.Schema{Parameters: []domain.SchemaParameter{{ParameterKey: "a"}}},
 			expected: "1.0.0",
 		},
 		{
-			name:     "patch — no param changes",
-			latest:   active("1.0.0", "a"),
-			draft:    domain.Schema{Parameters: params("a")},
+			name: "patch — no param changes",
+			latest: &domain.Schema{
+				SchemaVersion: "1.0.0",
+				Parameters:    []domain.SchemaParameter{{ParameterKey: "a"}},
+			},
+			draft:    domain.Schema{Parameters: []domain.SchemaParameter{{ParameterKey: "a"}}},
 			expected: "1.0.1",
 		},
 		{
-			name:     "minor — new optional param",
-			latest:   active("1.0.0", "a"),
-			draft:    domain.Schema{Parameters: params("a", "b")},
+			name: "minor — new optional param",
+			latest: &domain.Schema{
+				SchemaVersion: "1.0.0",
+				Parameters:    []domain.SchemaParameter{{ParameterKey: "a"}},
+			},
+			draft:    domain.Schema{Parameters: []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b", IsRequired: false}}},
 			expected: "1.1.0",
 		},
 		{
-			name:     "major — param removed",
-			latest:   active("1.1.0", "a", "b"),
-			draft:    domain.Schema{Parameters: params("a")},
+			name: "major — param removed",
+			latest: &domain.Schema{
+				SchemaVersion: "1.1.0",
+				Parameters:    []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b"}},
+			},
+			draft:    domain.Schema{Parameters: []domain.SchemaParameter{{ParameterKey: "a"}}},
 			expected: "2.0.0",
 		},
 		{
-			name:     "major — new required param",
-			latest:   active("2.0.0", "a"),
-			draft:    domain.Schema{Parameters: params("a", "!b")},
+			name: "major — new required param",
+			latest: &domain.Schema{
+				SchemaVersion: "2.0.0",
+				Parameters:    []domain.SchemaParameter{{ParameterKey: "a"}},
+			},
+			draft:    domain.Schema{Parameters: []domain.SchemaParameter{{ParameterKey: "a"}, {ParameterKey: "b", IsRequired: true}}},
 			expected: "3.0.0",
 		},
 	}
@@ -180,11 +176,12 @@ func TestComputeNextVersion(t *testing.T) {
 
 func TestParseSemver(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         string
-		major, minor  int
-		patch         int
-		expectErr     bool
+		name      string
+		input     string
+		major     int
+		minor     int
+		patch     int
+		expectErr bool
 	}{
 		{"valid", "1.2.3", 1, 2, 3, false},
 		{"zeros", "0.0.0", 0, 0, 0, false},
