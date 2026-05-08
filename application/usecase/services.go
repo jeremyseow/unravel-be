@@ -7,11 +7,13 @@ import (
 type AllServices struct {
 	SchemaService    SchemaService
 	ParameterService ParameterService
+	RegistryService  RegistryService
 }
 
 func NewAllServices(storages *postgres.AllStorages) *AllServices {
 	return &AllServices{
 		SchemaService:    NewSchemaService(storages.SchemaStorage),
 		ParameterService: NewParameterService(storages.ParameterStorage),
+		RegistryService:  NewRegistryService(storages.SchemaStorage),
 	}
 }

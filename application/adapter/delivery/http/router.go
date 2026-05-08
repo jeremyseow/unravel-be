@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http/middleware"
 	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http/parameter"
+	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http/registry"
 	"github.com/jeremyseow/unravel-be/application/adapter/delivery/http/schema"
 )
 
@@ -21,4 +22,5 @@ func SetupRoutes(httpRouter *gin.Engine, allHandlers *AllHandlers) {
 
 	schema.RegisterRoutes(api, allHandlers.SchemaHandler)
 	parameter.RegisterRoutes(api, allHandlers.ParameterHandler)
+	registry.RegisterRoutes(api, allHandlers.RegistryHandler)
 }
