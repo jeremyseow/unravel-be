@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jeremyseow/unravel-be/application/ctxkey"
@@ -81,6 +82,45 @@ func (s *SchemaStorage) CreateSchema(ctx context.Context, schema domain.Schema) 
 	}
 
 	return toDomainSchema(dbSchema, schema.Parameters), nil
+}
+
+func (s *SchemaStorage) ListSchemas(ctx context.Context, filter domain.ListSchemasFilter) ([]domain.Schema, error) {
+	tenantID := ctxkey.TenantID(ctx)
+	cond := EntitySchemas.TenantID.EQ(uuidStr(tenantID))
+
+	if filter.Lifecycle != nil {
+		cond = cond.AND(EntitySchemas.Lifecycle.EQ(String(*filter.Lifecycle)))
+	}
+	if filter.Name != nil && *filter.Name != "" {
+		pattern := String("%" + strings.ToLower(*filter.Name) + "%")
+		cond = cond.AND(
+			LOWER(EntitySchemas.SchemaKey).LIKE(pattern).
+				OR(LOWER(EntitySchemas.SchemaName_).LIKE(pattern)),
+		)
+	}
+
+	stmt := SELECT(
+		EntitySchemas.AllColumns,
+		EntitySchemasParametersMappings.AllColumns,
+	).FROM(
+		EntitySchemas.LEFT_JOIN(
+			EntitySchemasParametersMappings,
+			EntitySchemasParametersMappings.TenantID.EQ(EntitySchemas.TenantID).
+				AND(EntitySchemasParametersMappings.SchemaKey.EQ(EntitySchemas.SchemaKey)).
+				AND(EntitySchemasParametersMappings.SchemaVersion.EQ(EntitySchemas.SchemaVersion)),
+		),
+	).WHERE(cond).ORDER_BY(EntitySchemas.SchemaKey.ASC(), EntitySchemas.CreatedAt.DESC())
+
+	var rows []schemaWithMappings
+	if err := stmt.QueryContext(ctx, s.db, &rows); err != nil {
+		return nil, err
+	}
+
+	schemas := make([]domain.Schema, len(rows))
+	for i, row := range rows {
+		schemas[i] = toDomainSchema(row.EntitySchemas, toSchemaParameters(row.Parameters))
+	}
+	return schemas, nil
 }
 
 func (s *SchemaStorage) GetSchemas(ctx context.Context, key string) ([]domain.Schema, error) {
